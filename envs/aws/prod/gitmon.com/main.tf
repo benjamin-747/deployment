@@ -11,7 +11,7 @@ provider "aws" {
 }
 
 module "vpc" {
-  source              = "../../modules/vpc"
+  source              = "../../../../modules/network/aws/vpc"
   vpc_cidr            = "10.0.0.0/16"
   region              = var.region
   public_subnet_cidrs = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
@@ -19,12 +19,13 @@ module "vpc" {
 }
 
 module "sg" {
-  source = "../../modules/security_group"
+  source = "../../../../modules/security/aws/security_group"
+
   vpc_id = module.vpc.vpc_id
 }
 
 module "efs" {
-  source     = "../../modules/efs"
+  source     = "../../../../modules/storage/aws/efs"
   name       = "${var.app_suffix}-mono-efs"
   vpc_id     = module.vpc.vpc_id
   vpc_cidr   = "10.0.0.0/16"
@@ -33,12 +34,12 @@ module "efs" {
 
 
 module "acm" {
-  source      = "../../modules/acm"
+  source      = "../../../../modules/security/aws/acm"
   domain_name = "*.${var.base_domain}"
 }
 
 module "alb" {
-  source              = "../../modules/alb"
+  source              = "../../../../modules/compute/aws/alb"
   name                = "${var.app_suffix}-mega-alb"
   vpc_id              = module.vpc.vpc_id
   subnet_ids          = module.vpc.public_subnet_ids
@@ -75,7 +76,7 @@ module "alb" {
 
 
 module "mono-engine" {
-  source          = "../../modules/ecs"
+  source          = "../../../../modules/compute/aws/ecs"
   region          = var.region
   cluster_name    = "${var.app_suffix}-mega-app"
   task_family     = "${var.app_suffix}-mono-engine"
@@ -180,7 +181,7 @@ module "mono-engine" {
 }
 
 module "mega-ui-app" {
-  source          = "../../modules/ecs"
+  source          = "../../../../modules/compute/aws/ecs"
   region          = var.region
   cluster_name    = "${var.app_suffix}-mega-app"
   task_family     = "${var.app_suffix}-mega-ui"
@@ -205,7 +206,7 @@ module "mega-ui-app" {
 }
 
 module "mega-web-sync-app" {
-  source          = "../../modules/ecs"
+  source          = "../../../../modules/compute/aws/ecs"
   region          = var.region
   cluster_name    = "${var.app_suffix}-mega-app"
   task_family     = "${var.app_suffix}-mega-web-sync"
@@ -240,7 +241,7 @@ module "mega-web-sync-app" {
 
 
 module "orion-server-app" {
-  source          = "../../modules/ecs"
+  source          = "../../../../modules/compute/aws/ecs"
   region          = var.region
   cluster_name    = "${var.app_suffix}-mega-app"
   task_family     = "${var.app_suffix}-orion-server"
@@ -311,7 +312,7 @@ module "orion-server-app" {
 
 
 module "campsite-api-app" {
-  source          = "../../modules/ecs"
+  source          = "../../../../modules/compute/aws/ecs"
   region          = var.region
   cluster_name    = "${var.app_suffix}-mega-app"
   task_family     = "${var.app_suffix}-campsite-api"
@@ -359,7 +360,7 @@ module "campsite-api-app" {
 
 
 module "rds_pg" {
-  source              = "../../modules/rds"
+  source              = "../../../../modules/storage/aws/rds"
   engine              = "postgres"
   engine_version      = "17"
   identifier          = "mega-postgres-tf"
@@ -376,7 +377,7 @@ module "rds_pg" {
 
 
 # module "rds_mysql" {
-#   source             = "../../modules/rds"
+#   source             = "../../../../modules/storage/aws/rds"
 #   engine             = "mysql"
 #   engine_version     = "8.0"
 #   identifier         = "campsite-mysql"
@@ -392,7 +393,7 @@ module "rds_pg" {
 # }
 
 module "valkey" {
-  source             = "../../modules/valkey"
+  source             = "../../../../modules/storage/aws/valkey"
   name               = "mega-valkey-tf"
   subnet_ids         = module.vpc.public_subnet_ids
   security_group_ids = [module.sg.sg_id]

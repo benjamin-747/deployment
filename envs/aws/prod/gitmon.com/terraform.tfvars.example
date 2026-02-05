@@ -1,0 +1,14 @@
+base_domain = "gitmono.com"
+region      = "ap-southeast-2"
+db_username = "gitmega"
+db_password = "db_password"
+db_schema   = "gitmono"
+
+s3_key        = "s3_key"
+s3_secret_key = "s3_secret"
+s3_bucket     = "gitmono"
+
+rails_master_key = "ask admin for rails key"
+rails_env        = "staging-gitmono"
+ui_env           = "gitmono"
+app_suffix       = "gitmono-com"
