@@ -1,82 +1,87 @@
-# Required
-project_id = "your-gcp-project-id"
-base_domain = "mega.example.com"
+# Example variables for prod environment (Cloud Run)
+# Only list variables commonly customized – others keep defaults.
 
-# Optional: Override defaults
-# region = "us-central1"
-# zone = "us-central1-b"
+# Required project and domain
+project_id       = "your-gcp-project-id"
+base_domain      = "mega.example.com"           # used for certificates / app config
 
-# Storage (mapped from AWS s3_*)
-storage_bucket = "mega-prod-storage"
-# storage_key = "your-access-key"
-# storage_secret_key = "your-secret-key"
+# Region / zone (optional overrides)
+# region         = "us-central1"
+# zone           = "us-central1-b"
 
-# Database
-db_username = "mega_user"
-db_password = "your-prod-db-password"
-db_schema = "mega_prod"
+# GCS (object storage)
+gcs_bucket                = "mega-prod-storage"
+gcs_force_destroy         = false
 
-# Rails/UI
-rails_master_key = "your-prod-rails-master-key"
-rails_env = "production"
-ui_env = "production"
+# Artifact Registry (container images)
+artifact_registry_repo    = "mega-prod"
 
-# Application
-app_suffix = "prod"
-app_service_name = "mega-app"
-app_image = "us-central1-docker.pkg.dev/your-gcp-project-id/orion-worker-prod/mega:latest"
-app_container_port = 80
-app_replicas = 3
-
-# Ingress
-ingress_name = "mega-ingress"
-ingress_static_ip_name = "mega-prod-ip"
-ingress_managed_certificate_domains = ["mega.example.com"]
-ingress_rules = [
-  {
-    host         = "mega.example.com"
-    service_name = "mega-app"
-    service_port = 80
-  }
-]
-
-# Service Accounts (optional)
-iam_service_accounts = {
-  mega_app = {
-    display_name = "Mega App Service Account"
-    roles        = ["roles/cloudsql.client", "roles/storage.objectViewer"]
-    wi_bindings = [
-      {
-        namespace                = "default"
-        k8s_service_account_name = "mega-app-sa"
-      }
-    ]
-  }
+# Cloud Run backend application
+app_service_name          = "mega-backend"
+# app_image can point to ECR Public or Artifact Registry
+app_image                 = "public.ecr.aws/m8q5m4u3/mega:mono-0.1.0-pre-release"
+app_env = {
+  RAILS_ENV    = "production"
+  RACK_ENV     = "production"
 }
+app_cpu                   = "1"          # e.g. "2"
+app_memory                = "512Mi"      # e.g. "1Gi"
+app_min_instances         = 0
+app_max_instances         = 20
+app_allow_unauth          = true         # set false to require IAP / IAM
 
-# Feature flags (set to false to disable components)
-enable_build_env = true
-enable_gcs = true
-enable_cloud_sql = true
-enable_redis = true
-enable_filestore = true
-enable_apps = true
-enable_ingress = true
-enable_logging = true
-enable_monitoring = true
-enable_alerts = true
+# Cloud Run UI (Next.js SSR)
+# Leave ui_service_name empty to skip creating UI service
+ui_service_name           = "mega-ui"
+ui_image                  = "public.ecr.aws/m8q5m4u3/mega:mega-ui-staging-0.1.0-pre-release"
+ui_env_vars = {
+  APP_ENV = "staging"
+}
+ui_cpu                    = "1"
+ui_memory                 = "512Mi"
+ui_min_instances          = 0
+ui_max_instances          = 10
+ui_allow_unauth           = true
 
-# Resource names (optional)
-gcs_bucket = "mega-prod-storage"
-cloud_sql_instance_name = "mega-prod-db"
-redis_instance_name = "mega-prod-redis"
-filestore_instance_name = "mega-prod-fs"
+# Database (Cloud SQL)
+cloud_sql_instance_name   = "mega-prod-db"
+cloud_sql_db_name         = "mega"
+db_username               = "mega_user"
+db_password               = "your-prod-db-password"
 
-# Orion Worker (optional)
-enable_orion_worker = false
-# orion_worker_image = "public.ecr.aws/m8q5m4u3/mega:orion-client-0.1.0-pre-release-amd64"
-# orion_worker_server_ws = "wss://orion.gitmono.com/ws"
-# orion_worker_nodepool_name = "prod-default"
+# Redis (Memorystore)
+redis_instance_name       = "mega-prod-redis"
 
-# Alert notification channels (optional)
+# Filestore (optional – set enable_filestore=false to skip)
+filestore_instance_name   = "mega-prod-fs"
+
+# Storage service keys – only if accessing external S3-compatible storage
+# storage_key             = ""
+# storage_secret_key      = ""
+# storage_bucket          = ""
+
+# Rails secrets (sensitive)
+rails_master_key          = "your-prod-rails-master-key"
+
+# Feature flags – leave true unless you explicitly want to skip resource creation
+enable_gcs                = true
+enable_cloud_sql          = true
+enable_redis              = true
+enable_filestore          = true
+enable_apps               = true
+
+# Private networking for Cloud SQL / Redis (VPC + VPC Connector)
+enable_private_networking = true
+vpc_connector_name        = "mega-prod-cr-conn"
+# vpc_connector_cidr       = "10.43.0.0/28"  # optional: leave null for auto
+cloud_run_vpc_egress       = "private-ranges-only"
+
+enable_logging            = true
+enable_monitoring         = true
+enable_alerts             = true
+
+# Alerting channels example
 # alert_notification_channels = ["projects/your-project/notificationChannels/1234567890"]
+
+# IAM service accounts (optional complex object) – see variables.tf for full schema
+# iam_service_accounts = {}

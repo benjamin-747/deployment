@@ -5,11 +5,15 @@ locals {
   enable_redis     = var.enable_redis
   enable_filestore = var.enable_filestore
   enable_apps      = var.enable_apps
-  enable_ingress   = var.enable_ingress
+
+  enable_private_networking = var.enable_private_networking
+  vpc_connector_name        = var.vpc_connector_name != "" ? var.vpc_connector_name : "${var.name_prefix}-cr-conn"
 }
 
+# GKE related modules disabled/removed, Cloud Run introduced for app service
+
 module "network" {
-  count  = local.enable_build_env ? 1 : 0
+  count  = local.enable_private_networking ? 1 : 0
   source = "../../../modules/gcp/network"
 
   name_prefix              = var.name_prefix
@@ -27,52 +31,6 @@ module "artifact_registry" {
 
   location  = var.artifact_registry_location
   repo_name = var.artifact_registry_repo
-}
-
-module "gke" {
-  count  = local.enable_build_env ? 1 : 0
-  source = "../../../modules/gcp/gke"
-
-  project_id   = var.project_id
-  region       = var.region
-  cluster_name = var.cluster_name
-
-  network_self_link    = module.network[0].network_self_link
-  subnetwork_self_link = module.network[0].subnetwork_self_link
-
-  ip_range_pods_name     = module.network[0].pods_secondary_range_name
-  ip_range_services_name = module.network[0].services_secondary_range_name
-
-  logging_service    = var.enable_logging ? "logging.googleapis.com/kubernetes" : "none"
-  monitoring_service = var.enable_monitoring ? "monitoring.googleapis.com/kubernetes" : "none"
-}
-
-module "nodepool" {
-  count  = local.enable_build_env ? 1 : 0
-  source = "../../../modules/gcp/gke/nodepool"
-
-  project_id   = var.project_id
-  region       = var.region
-  cluster_name = module.gke[0].cluster_name
-
-  name         = var.nodepool_name
-  machine_type = var.node_machine_type
-  disk_size_gb = var.node_disk_size_gb
-
-  min_count = var.node_min_count
-  max_count = var.node_max_count
-
-  labels = {
-    nodepool = var.nodepool_name
-  }
-
-  taints = [
-    {
-      key    = "dedicated"
-      value  = "orion-build"
-      effect = "NO_SCHEDULE"
-    }
-  ]
 }
 
 module "iam" {
@@ -116,7 +74,7 @@ module "cloud_sql" {
   disk_size                = var.cloud_sql_disk_size
   disk_type                = var.cloud_sql_disk_type
   availability_type        = var.cloud_sql_availability_type
-  private_network          = local.enable_build_env ? module.network[0].network_self_link : ""
+  private_network          = local.enable_private_networking ? module.network[0].network_self_link : ""
   private_ip_prefix_length = var.cloud_sql_private_ip_prefix_length
   enable_private_service_connection = var.cloud_sql_enable_private_service_connection
   enable_public_ip         = var.cloud_sql_enable_public_ip
@@ -135,7 +93,7 @@ module "redis" {
   region                  = var.region
   tier                    = var.redis_tier
   memory_size_gb          = var.redis_memory_size_gb
-  network                 = local.enable_build_env ? module.network[0].network_self_link : ""
+  network                 = local.enable_private_networking ? module.network[0].network_self_link : ""
   transit_encryption_mode = var.redis_transit_encryption_mode
 }
 
@@ -145,55 +103,66 @@ module "filestore" {
 
   name           = var.filestore_instance_name
   location       = var.zone != "" ? var.zone : "${var.region}-b"
-  network        = local.enable_build_env ? module.network[0].network_self_link : ""
+  network        = local.enable_private_networking ? module.network[0].network_self_link : ""
   tier           = var.filestore_tier
   capacity_gb    = var.filestore_capacity_gb
   file_share_name = var.filestore_file_share_name
   reserved_ip_range = var.filestore_reserved_ip_range
 }
 
-module "gke_service" {
-  count  = local.enable_apps ? 1 : 0
-  source = "../../../modules/gcp/gke_service"
+# Serverless VPC Access Connector for Cloud Run private egress
+module "vpc_connector" {
+  count  = local.enable_private_networking ? 1 : 0
+  source = "../../../modules/gcp/vpc_connector"
 
-  name           = var.app_service_name
-  namespace      = var.app_namespace
-  image          = var.app_image
-  container_port = var.app_container_port
-  env            = var.app_env
-  volumes        = var.app_volumes
-  volume_mounts  = var.app_volume_mounts
-  replicas       = var.app_replicas
-  service_type   = var.app_service_type
-  cpu_request    = var.app_cpu_request
-  memory_request = var.app_memory_request
-  cpu_limit      = var.app_cpu_limit
-  memory_limit   = var.app_memory_limit
-  enable_hpa     = var.app_enable_hpa
-  hpa_min_replicas = var.app_hpa_min_replicas
-  hpa_max_replicas = var.app_hpa_max_replicas
-  hpa_cpu_utilization = var.app_hpa_cpu_utilization
+  name          = local.vpc_connector_name
+  region        = var.region
+  network       = module.network[0].network_self_link
+  ip_cidr_range = var.vpc_connector_cidr
 }
 
-module "ingress" {
-  count  = local.enable_ingress ? 1 : 0
-  source = "../../../modules/gcp/ingress"
+# Cloud Run module for application service
+module "app_cloud_run" {
+  count        = local.enable_apps ? 1 : 0
+  source       = "../../../modules/gcp/cloud_run"
 
-  name                    = var.ingress_name
-  namespace               = var.ingress_namespace
-  static_ip_name          = var.ingress_static_ip_name
-  ingress_class_name      = var.ingress_class_name
-  managed_certificate_domains = var.ingress_managed_certificate_domains
-  rules                   = var.ingress_rules
+  project_id   = var.project_id
+  region       = var.region
+  service_name = var.app_service_name
+  image        = var.app_image
+  env_vars     = var.app_env
+
+  cpu            = var.app_cpu
+  memory         = var.app_memory
+  min_instances  = var.app_min_instances
+  max_instances  = var.app_max_instances
+  allow_unauth   = var.app_allow_unauth
+
+  vpc_connector = local.enable_private_networking ? module.vpc_connector[0].name : null
+  vpc_egress     = var.cloud_run_vpc_egress
 }
 
-output "gke_cluster_name" {
-  value = local.enable_build_env ? module.gke[0].cluster_name : null
+module "ui_cloud_run" {
+  count        = local.enable_apps && var.ui_service_name != "" ? 1 : 0
+  source       = "../../../modules/gcp/cloud_run"
+
+  project_id   = var.project_id
+  region       = var.region
+  service_name = var.ui_service_name
+  image        = var.ui_image
+  env_vars     = var.ui_env_vars
+
+  cpu            = var.ui_cpu
+  memory         = var.ui_memory
+  min_instances  = var.ui_min_instances
+  max_instances  = var.ui_max_instances
+  allow_unauth   = var.ui_allow_unauth
+
+  vpc_connector = local.enable_private_networking ? module.vpc_connector[0].name : null
+  vpc_egress     = var.cloud_run_vpc_egress
 }
 
-output "gke_cluster_location" {
-  value = local.enable_build_env ? module.gke[0].location : null
-}
+# Outputs adjusted (removed GKE related ones)
 
 output "artifact_registry_repo" {
   value = local.enable_build_env ? module.artifact_registry[0].repository : null
@@ -219,18 +188,6 @@ output "redis_port" {
   value = local.enable_redis ? module.redis[0].port : null
 }
 
-output "pg_endpoint" {
-  value = local.enable_cloud_sql ? module.cloud_sql[0].db_endpoint : null
-}
-
-output "valkey_endpoint" {
-  value = local.enable_redis ? [{ address = module.redis[0].host, port = module.redis[0].port }] : null
-}
-
-output "alb_dns_name" {
-  value = local.enable_ingress ? coalesce(module.ingress[0].ip_address, module.ingress[0].hostname) : null
-}
-
 output "filestore_instance_name" {
   value = local.enable_filestore ? module.filestore[0].instance_name : null
 }
@@ -241,6 +198,14 @@ output "filestore_file_share_name" {
 
 output "filestore_ip_address" {
   value = local.enable_filestore ? module.filestore[0].ip_address : null
+}
+
+output "app_cloud_run_url" {
+  value = local.enable_apps ? module.app_cloud_run[0].url : null
+}
+
+output "ui_cloud_run_url" {
+  value = local.enable_apps && var.ui_service_name != "" ? module.ui_cloud_run[0].url : null
 }
 
 output "iam_service_accounts" {
@@ -261,35 +226,4 @@ output "project_id" {
 output "monitoring_logging_api_enabled" {
   description = "Whether Logging/Monitoring APIs are enabled"
   value       = module.monitoring.logging_api_enabled && module.monitoring.monitoring_api_enabled
-}
-
-module "orion_worker" {
-  count  = var.enable_orion_worker ? 1 : 0
-  source = "../../../modules/gcp/orion_worker"
-
-  namespace   = "orion-worker"
-  image       = var.orion_worker_image
-  server_ws   = var.orion_worker_server_ws
-
-  scorpio_base_url = var.orion_worker_scorpio_base_url
-  scorpio_lfs_url  = var.orion_worker_scorpio_lfs_url
-  rust_log          = var.orion_worker_rust_log
-
-  tolerations = [
-    {
-      key      = "dedicated"
-      operator = "Equal"
-      value    = "orion-build"
-      effect   = "NoSchedule"
-    }
-  ]
-
-  node_selector = {
-    nodepool = var.orion_worker_nodepool_name
-  }
-
-  cpu_request    = var.orion_worker_cpu_request
-  memory_request = var.orion_worker_memory_request
-  cpu_limit      = var.orion_worker_cpu_limit
-  memory_limit   = var.orion_worker_memory_limit
 }
