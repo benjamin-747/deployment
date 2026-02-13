@@ -1,25 +1,21 @@
 locals {
-  enable_build_env = var.enable_build_env
-  enable_gcs       = var.enable_gcs
-  enable_cloud_sql = var.enable_cloud_sql
-  enable_redis     = var.enable_redis
-  enable_apps      = var.enable_apps
 
   enable_private_networking = var.enable_private_networking
 
   # Strictly use app_name for resource naming (Convention over Configuration)
-  network_name            = "${var.app_name}-vpc"
-  subnet_name             = "${var.app_name}-subnet"
-  gcs_bucket              = "${var.app_name}-storage"
-  cloud_sql_instance_name = var.cloud_sql_instance_name != "" ? var.cloud_sql_instance_name : "${var.app_name}-db"
-  redis_instance_name     = var.redis_instance_name != "" ? var.redis_instance_name : "${var.app_name}-redis"
-  mono_service_name       = "${var.app_name}-backend"
-  ui_service_name         = "${var.app_name}-ui"
-  orion_service_name      = "${var.app_name}-orion"
-  campsite_service_name   = "${var.app_name}-campsite"
-  vpc_connector_name      = "${var.app_name}-cr-conn"
+  network_name          = "${var.app_name}-vpc3"
+  subnet_name           = "${var.app_name}-subnet"
+  gcs_bucket            = "${var.app_name}-storage"
+  redis_instance_name   = var.redis_instance_name != "" ? var.redis_instance_name : "${var.app_name}-redis"
+  mono_service_name     = "${var.app_name}-backend"
+  ui_service_name       = "${var.app_name}-ui"
+  orion_service_name    = "${var.app_name}-orion"
+  campsite_service_name = "${var.app_name}-campsite"
+  notesync_service_name = "${var.app_name}-notesync"
+  vpc_connector_name    = "${var.app_name}-cr-conn"
 
   enable_lb = var.enable_lb
+  cloud_run_vpc_egress = "all-traffic"
 }
 
 
@@ -63,7 +59,6 @@ module "monitoring" {
 
 # GCS module
 module "gcs" {
-  count  = local.enable_gcs ? 1 : 0
   source = "../../../modules/gcp/gcs"
 
   name                        = local.gcs_bucket
@@ -73,41 +68,75 @@ module "gcs" {
 }
 
 # Cloud SQL module
-module "cloud_sql" {
-  count  = local.enable_cloud_sql ? 1 : 0
+module "cloud_sql_pg" {
   source = "../../../modules/gcp/cloud_sql"
 
-  name                              = local.cloud_sql_instance_name
-  database_version                  = var.cloud_sql_database_version
-  region                            = var.region
-  tier                              = var.cloud_sql_tier
-  disk_size                         = var.cloud_sql_disk_size
-  disk_type                         = var.cloud_sql_disk_type
-  availability_type                 = var.cloud_sql_availability_type
-  private_network                   = local.enable_private_networking ? module.network[0].network_self_link : ""
-  private_ip_prefix_length          = var.cloud_sql_private_ip_prefix_length
-  enable_private_service_connection = var.cloud_sql_enable_private_service_connection
-  enable_public_ip                  = var.cloud_sql_enable_public_ip
-  db_name                           = var.cloud_sql_db_name
-  db_username                       = var.db_username
-  db_password                       = var.db_password
-  backup_enabled                    = var.cloud_sql_backup_enabled
-  deletion_protection               = var.cloud_sql_deletion_protection
+  name                = "${var.app_name}-pg"
+  database_version    = "POSTGRES_17"
+  region              = var.region
+  tier                = "db-f1-micro"
+  disk_size           = 10
+  disk_type           = "PD_SSD"
+  availability_type   = "ZONAL"
+  private_network     = local.enable_private_networking ? module.network[0].network_self_link : ""
+  enable_public_ip    = var.cloud_sql_enable_public_ip
+  db_name             = var.cloud_sql_pg_name
+  db_username         = var.db_username
+  db_password         = var.db_password
+  backup_enabled      = false
+  deletion_protection = false
+  depends_on          = [module.network]
+
+}
+
+module "cloud_sql_mysql" {
+  source = "../../../modules/gcp/cloud_sql"
+
+  name              = "${var.app_name}-mysql"
+  database_version  = "MYSQL_8_4"
+  region            = var.region
+  tier              = "db-f1-micro"
+  disk_size         = 10
+  disk_type         = "PD_SSD"
+  availability_type = "ZONAL"
+
+  private_network  = local.enable_private_networking ? module.network[0].network_self_link : ""
+  enable_public_ip = var.cloud_sql_enable_public_ip
+
+  db_name     = var.cloud_sql_pg_name
+  db_username = var.db_username
+  db_password = var.db_password
+
+  backup_enabled      = false
+  deletion_protection = false
+  depends_on          = [module.network]
+
 }
 
 # Redis module
 module "redis" {
-  count  = local.enable_redis ? 1 : 0
-  source = "../../../modules/gcp/redis"
-
+  source                  = "../../../modules/gcp/redis"
+  project_id              = var.project_id
   name                    = local.redis_instance_name
   region                  = var.region
-  tier                    = var.redis_tier
   memory_size_gb          = var.redis_memory_size_gb
   network                 = local.enable_private_networking ? module.network[0].network_self_link : ""
   transit_encryption_mode = var.redis_transit_encryption_mode
 }
 
+
+# Private DNS
+module "private_dns" {
+  source = "../../../modules/gcp/private_dns"
+
+  network           = local.enable_private_networking ? module.network[0].network_self_link : ""
+  zone_name         = "internal-zone"
+  dns_name          = "internal.${var.base_domain}."
+  redis_record_name = "redis.internal.${var.base_domain}."
+  redis_ip          = module.redis.host
+  mysql_record_name = "mysql.internal.${var.base_domain}."
+  mysql_ip          = module.cloud_sql_mysql.db_endpoint
+}
 
 
 # Serverless VPC Access Connector
@@ -123,7 +152,6 @@ module "vpc_connector" {
 
 # Cloud Run: Backend
 module "mono_cloud_run" {
-  count  = local.enable_apps ? 1 : 0
   source = "../../../modules/gcp/cloud_run"
 
   project_id   = var.project_id
@@ -132,7 +160,7 @@ module "mono_cloud_run" {
   image        = var.app_image
   env_vars = {
     MEGA_LOG__LEVEL                  = "info"
-    MEGA_DATABASE__DB_URL            = "postgres://${var.db_username}:${var.db_password}@${local.enable_cloud_sql ? module.cloud_sql[0].db_endpoint : null}:5432/${var.cloud_sql_db_name}"
+    MEGA_DATABASE__DB_URL            = "postgres://${var.db_username}:${var.db_password}@${module.cloud_sql_pg.db_endpoint}:5432/${var.cloud_sql_pg_name}"
     MEGA_MONOREPO__STORAGE_TYPE      = "gcs"
     MEGA_BUILD__ORION_SERVER         = "https://orion.${var.base_domain}"
     MEGA_LFS__STORAGE_TYPE           = "gcs"
@@ -140,22 +168,21 @@ module "mono_cloud_run" {
     MEGA_OBJECT_STORAGE__GCS__BUCKET = "${local.gcs_bucket}"
     MEGA_OAUTH__CAMPSITE_API_DOMAIN  = "https://api.${var.base_domain}"
     MEGA_OAUTH__ALLOWED_CORS_ORIGINS = "https://app.${var.base_domain}"
-    MEGA_REDIS__URL                  = "redis://${local.enable_redis ? module.redis[0].host : null}:6379"
+    MEGA_REDIS__URL                  = "redis://${module.redis.host}:6379"
   }
   cpu            = "1"
   memory         = "1024Mi"
-  min_instances  = 0
-  max_instances  = 10
+  min_instances  = 1
+  max_instances  = 2
   allow_unauth   = true
   container_port = 8000
 
   vpc_connector = local.enable_private_networking ? module.vpc_connector[0].name : null
-  vpc_egress    = var.cloud_run_vpc_egress
+  vpc_egress    = local.cloud_run_vpc_egress
 }
 
 # Cloud Run: UI
 module "ui_cloud_run" {
-  count  = local.enable_apps ? 1 : 0
   source = "../../../modules/gcp/cloud_run"
 
   project_id   = var.project_id
@@ -167,17 +194,16 @@ module "ui_cloud_run" {
   cpu            = "1"
   memory         = "512Mi"
   min_instances  = 0
-  max_instances  = 10
+  max_instances  = 2
   allow_unauth   = true
   container_port = 3000
 
   vpc_connector = local.enable_private_networking ? module.vpc_connector[0].name : null
-  vpc_egress    = var.cloud_run_vpc_egress
+  vpc_egress    = local.cloud_run_vpc_egress
 }
 
 # Cloud Run: Orion Server
 module "orion_cloud_run" {
-  count  = local.enable_apps && var.orion_image != "" ? 1 : 0
   source = "../../../modules/gcp/cloud_run"
 
   project_id   = var.project_id
@@ -186,25 +212,25 @@ module "orion_cloud_run" {
   image        = var.orion_image
   env_vars = {
     # MEGA_CONFIG                     = "/opt/mega/etc/config.toml"
-    MEGA_ORION_SERVER__DB_URL       = "postgres://${var.db_username}:${var.db_password}@${local.enable_cloud_sql ? module.cloud_sql[0].db_endpoint : null}:5432/${var.cloud_sql_db_name}"
-    MEGA_ORION_SERVER__MONOBASE_URL = "https://git.${var.base_domain}"
-    MEGA_ORION_SERVER__STORAGE_TYPE = "gcs"
+    MEGA_ORION_SERVER__DB_URL        = "postgres://${var.db_username}:${var.db_password}@${module.cloud_sql_pg.db_endpoint}:5432/${var.cloud_sql_pg_name}"
+    MEGA_ORION_SERVER__MONOBASE_URL  = "https://git.${var.base_domain}"
+    MEGA_ORION_SERVER__STORAGE_TYPE  = "gcs"
+    MEGA_OAUTH__ALLOWED_CORS_ORIGINS = "https://app.${var.base_domain}"
   }
 
   cpu            = "1"
   memory         = "512Mi"
   min_instances  = 0
-  max_instances  = 10
+  max_instances  = 2
   allow_unauth   = true
   container_port = 8004
 
   vpc_connector = local.enable_private_networking ? module.vpc_connector[0].name : null
-  vpc_egress    = var.cloud_run_vpc_egress
+  vpc_egress    = local.cloud_run_vpc_egress
 }
 
 # Cloud Run: Campsite
 module "campsite_cloud_run" {
-  count  = local.enable_apps && var.campsite_image != "" ? 1 : 0
   source = "../../../modules/gcp/cloud_run"
 
   project_id   = var.project_id
@@ -218,16 +244,20 @@ module "campsite_cloud_run" {
     SERVER_COMMAND   = "bundle exec puma"
   }
 
+  depends_on = [
+    module.cloud_sql_mysql,
+    module.redis
+  ]
 
   cpu               = "1"
   memory            = "1024Mi"
-  min_instances     = 0
-  max_instances     = 10
+  min_instances     = 1
+  max_instances     = 2
   allow_unauth      = true
   container_port    = 8080
   enable_migrations = true
   vpc_connector     = local.enable_private_networking ? module.vpc_connector[0].name : null
-  vpc_egress        = var.cloud_run_vpc_egress
+  vpc_egress        = local.cloud_run_vpc_egress
 }
 
 # Load Balancer module
@@ -261,47 +291,45 @@ module "lb_backends" {
     }
 
   }
-  # backend_service_name = local.mono_service_name
-  # ui_service_name      = local.ui_service_name
   lb_domain = var.base_domain
-  # api_path_prefixes    = var.lb_api_path_prefixes
 }
 
 
 output "gcs_bucket_name" {
-  value = local.enable_gcs ? module.gcs[0].bucket_name : null
+  value = module.gcs.bucket_name
 }
 
-output "cloud_sql_db_endpoint" {
-  value = local.enable_cloud_sql ? module.cloud_sql[0].db_endpoint : null
+output "cloud_sql_pg_endpoint" {
+  value = module.cloud_sql_pg.db_endpoint
+}
+
+output "cloud_sql_mysql_endpoint" {
+  value = module.cloud_sql_mysql.db_endpoint
 }
 
 output "cloud_sql_connection_name" {
-  value = local.enable_cloud_sql ? module.cloud_sql[0].connection_name : null
+  value = module.cloud_sql_pg.connection_name
 }
 
 output "redis_host" {
-  value = local.enable_redis ? module.redis[0].host : null
+  value = module.redis.host
 }
 
-output "redis_port" {
-  value = local.enable_redis ? module.redis[0].port : null
-}
 
 output "mono_cloud_run_url" {
-  value = local.enable_apps ? module.mono_cloud_run[0].url : null
+  value = module.mono_cloud_run.url
 }
 
 output "ui_cloud_run_url" {
-  value = local.enable_apps ? module.ui_cloud_run[0].url : null
+  value = module.ui_cloud_run.url
 }
 
 output "orion_cloud_run_url" {
-  value = local.enable_apps && var.orion_image != "" ? module.orion_cloud_run[0].url : null
+  value = module.orion_cloud_run.url
 }
 
 output "campsite_cloud_run_url" {
-  value = local.enable_apps && var.campsite_image != "" ? module.campsite_cloud_run[0].url : null
+  value = module.campsite_cloud_run.url
 }
 
 output "project_id" {

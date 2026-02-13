@@ -47,17 +47,7 @@ variable "private_network" {
   description = "VPC self link"
 }
 
-variable "private_ip_prefix_length" {
-  type        = number
-  default     = 16
-  description = "Prefix length for private services range"
-}
 
-variable "enable_private_service_connection" {
-  type        = bool
-  default     = true
-  description = "Create private service networking connection"
-}
 
 variable "enable_public_ip" {
   type        = bool

@@ -31,7 +31,7 @@ variable "memory" {
 
 variable "min_instances" {
   type    = number
-  default = 0
+  default = 1
 }
 
 variable "max_instances" {

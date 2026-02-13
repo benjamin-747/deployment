@@ -1,18 +1,4 @@
-resource "google_compute_global_address" "private_service_range" {
-  count         = var.enable_private_service_connection ? 1 : 0
-  name          = "${var.name}-private-range"
-  purpose       = "VPC_PEERING"
-  address_type  = "INTERNAL"
-  prefix_length = var.private_ip_prefix_length
-  network       = var.private_network
-}
 
-resource "google_service_networking_connection" "private_vpc_connection" {
-  count                   = var.enable_private_service_connection ? 1 : 0
-  network                 = var.private_network
-  service                 = "servicenetworking.googleapis.com"
-  reserved_peering_ranges = [google_compute_global_address.private_service_range[0].name]
-}
 
 resource "google_sql_database_instance" "this" {
   name                = var.name
@@ -37,7 +23,6 @@ resource "google_sql_database_instance" "this" {
     }
   }
 
-  depends_on = [google_service_networking_connection.private_vpc_connection]
 }
 
 resource "google_sql_database" "db" {

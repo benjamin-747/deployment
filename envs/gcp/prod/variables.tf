@@ -27,37 +27,8 @@ variable "base_domain" {
   default     = "buck2hub.com"
 }
 
-# --- Feature Flags ---
-variable "enable_build_env" {
-  type        = bool
-  description = "Enable Artifact Registry build environment."
-  default     = false
-}
 
-variable "enable_gcs" {
-  type    = bool
-  default = true
-}
 
-variable "enable_cloud_sql" {
-  type    = bool
-  default = true
-}
-
-variable "enable_redis" {
-  type    = bool
-  default = true
-}
-
-variable "enable_filestore" {
-  type    = bool
-  default = true
-}
-
-variable "enable_apps" {
-  type    = bool
-  default = true
-}
 
 variable "enable_lb" {
   type        = bool
@@ -91,22 +62,7 @@ variable "vpc_connector_cidr" {
   default = "10.8.0.0/28"
 }
 
-variable "cloud_run_vpc_egress" {
-  type    = string
-  default = "private-ranges-only"
-}
 
-# --- Artifact Registry ---
-variable "artifact_registry_location" {
-  type    = string
-  default = "us-central1"
-}
-
-variable "artifact_registry_repo" {
-  type        = string
-  description = "Optional Artifact Registry repository name override."
-  default     = ""
-}
 
 # --- Storage (GCS) ---
 variable "gcs_bucket" {
@@ -126,65 +82,18 @@ variable "gcs_uniform_bucket_level_access" {
 }
 
 # --- Database (Cloud SQL) ---
-variable "cloud_sql_instance_name" {
-  type        = string
-  description = "Optional Cloud SQL instance name override."
-  default     = ""
-}
-
-variable "cloud_sql_database_version" {
-  type    = string
-  default = "POSTGRES_17"
-}
-
-variable "cloud_sql_tier" {
-  type    = string
-  default = "db-f1-micro"
-}
-
-variable "cloud_sql_disk_size" {
-  type    = number
-  default = 10
-}
-
-variable "cloud_sql_disk_type" {
-  type    = string
-  default = "PD_SSD"
-}
-
-variable "cloud_sql_availability_type" {
-  type    = string
-  default = "ZONAL"
-}
-
-variable "cloud_sql_private_ip_prefix_length" {
-  type    = number
-  default = 16
-}
-
-variable "cloud_sql_enable_private_service_connection" {
-  type    = bool
-  default = true
-}
 
 variable "cloud_sql_enable_public_ip" {
   type    = bool
   default = false
 }
 
-variable "cloud_sql_db_name" {
-  type    = string
-  default = "mega"
+variable "cloud_sql_pg_name" {
+  type = string
 }
 
-variable "cloud_sql_backup_enabled" {
-  type    = bool
-  default = false
-}
-
-variable "cloud_sql_deletion_protection" {
-  type    = bool
-  default = false
+variable "cloud_sql_mysql_name" {
+  type = string
 }
 
 # --- Redis (Memorystore) ---
@@ -194,10 +103,7 @@ variable "redis_instance_name" {
   default     = ""
 }
 
-variable "redis_tier" {
-  type    = string
-  default = "BASIC"
-}
+
 
 variable "redis_memory_size_gb" {
   type    = number

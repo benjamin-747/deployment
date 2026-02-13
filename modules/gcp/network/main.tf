@@ -6,7 +6,7 @@ locals {
   public_subnet_map  = { for idx, cidr in var.public_subnet_cidrs : idx => cidr }
   private_subnet_map = { for idx, cidr in var.private_subnet_cidrs : idx => cidr }
 
-  default_gke_node_tags = ["${var.app_name}-gke"]
+  default_gke_node_tags   = ["${var.app_name}-gke"]
   effective_gke_node_tags = length(var.gke_node_tags) > 0 ? var.gke_node_tags : local.default_gke_node_tags
 
   health_check_port_numbers = [for p in var.health_check_ports : tonumber(p)]
@@ -133,4 +133,19 @@ resource "google_compute_firewall" "allow_health_checks" {
 
   source_ranges = var.health_check_source_ranges
   target_tags   = local.effective_gke_node_tags
+}
+
+
+resource "google_compute_global_address" "private_service_range" {
+  name          = "cloudsql-db-private-range"
+  purpose       = "VPC_PEERING"
+  address_type  = "INTERNAL"
+  prefix_length = 16
+  network       = google_compute_network.this.self_link
+}
+
+resource "google_service_networking_connection" "private_vpc_connection" {
+  network                 = google_compute_network.this.self_link
+  service                 = "servicenetworking.googleapis.com"
+  reserved_peering_ranges = [google_compute_global_address.private_service_range.name]
 }

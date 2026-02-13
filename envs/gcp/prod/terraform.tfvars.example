@@ -23,19 +23,18 @@ campsite_image = "us-central1-docker.pkg.dev/infra-20250121-20260121-0235/mega/m
 
 
 # Database (Cloud SQL)
-cloud_sql_db_name = "buck2hub"
+cloud_sql_pg_name = "buck2hub"
+cloud_sql_mysql_name = "campsite_api_buck2hub"
 db_username       = "gitmega"
 db_password       = "your-prod-db-password"
 
 # Testing (option 1): enable public IP while keeping private networking to avoid empty network references
-cloud_sql_enable_private_service_connection = true
 cloud_sql_enable_public_ip                  = true
 
 # VPC Connector CIDR (Required for the module to avoid 400 error)
 vpc_connector_cidr = "10.8.0.0/28"
 
 # Redis (Memorystore)
-redis_tier           = "BASIC" # no HA
 redis_memory_size_gb = 1
 
 # Rails secrets (sensitive)

@@ -3,16 +3,15 @@ variable "name" {
   description = "Memorystore instance name"
 }
 
+variable "project_id" {
+  type = string
+}
+
 variable "region" {
   type        = string
   description = "GCP region"
 }
 
-variable "tier" {
-  type        = string
-  default     = "STANDARD_HA"
-  description = "Memorystore tier"
-}
 
 variable "memory_size_gb" {
   type        = number
