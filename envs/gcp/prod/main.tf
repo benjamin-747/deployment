@@ -7,7 +7,7 @@ locals {
   subnet_name           = "${var.app_name}-subnet"
   gcs_bucket            = "${var.app_name}-storage"
   redis_instance_name   = var.redis_instance_name != "" ? var.redis_instance_name : "${var.app_name}-redis"
-  mono_service_name     = "${var.app_name}-backend"
+  mono_service_name     = "${var.app_name}-mono"
   ui_service_name       = "${var.app_name}-ui"
   orion_service_name    = "${var.app_name}-orion"
   campsite_service_name = "${var.app_name}-campsite"
