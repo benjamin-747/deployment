@@ -158,16 +158,17 @@ module "mono_cloud_run" {
   service_name = local.mono_service_name
   image        = var.app_image
   env_vars = {
-    MEGA_LOG__LEVEL                  = "info"
-    MEGA_DATABASE__DB_URL            = "postgres://${var.db_username}:${var.db_password}@${module.cloud_sql_pg.db_endpoint}:5432/${var.cloud_sql_pg_name}"
-    MEGA_MONOREPO__STORAGE_TYPE      = "gcs"
-    MEGA_BUILD__ORION_SERVER         = "https://orion.${var.base_domain}"
-    MEGA_LFS__STORAGE_TYPE           = "gcs"
-    MEGA_LFS__HTTP_URL               = "https://git.${var.base_domain}"
-    MEGA_OBJECT_STORAGE__GCS__BUCKET = "${local.gcs_bucket}"
-    MEGA_OAUTH__CAMPSITE_API_DOMAIN  = "https://api.${var.base_domain}"
-    MEGA_OAUTH__ALLOWED_CORS_ORIGINS = "https://app.${var.base_domain}"
-    MEGA_REDIS__URL                  = "redis://${module.redis.host}:6379"
+    MEGA_LOG__LEVEL                       = "info"
+    MEGA_DATABASE__DB_URL                 = "postgres://${var.db_username}:${var.db_password}@${module.cloud_sql_pg.db_endpoint}:5432/${var.cloud_sql_pg_name}"
+    MEGA_MONOREPO__STORAGE_TYPE           = "gcs"
+    MEGA_BUILD__ORION_SERVER              = "https://orion.${var.base_domain}"
+    MEGA_LFS__STORAGE_TYPE                = "gcs"
+    MEGA_LFS__HTTP_URL                    = "https://git.${var.base_domain}"
+    MEGA_OBJECT_STORAGE__GCS__BUCKET      = "${local.gcs_bucket}"
+    MEGA_OAUTH__CAMPSITE_API_DOMAIN       = "https://api.${var.base_domain}"
+    MEGA_OAUTH__ALLOWED_CORS_ORIGINS      = "https://app.${var.base_domain}"
+    MEGA_REDIS__URL                       = "redis://${module.redis.host}:6379"
+    MEGA_AUTHENTICATION__ENABLE_HTTP_AUTH = true
   }
   cpu            = "1"
   memory         = "1024Mi"
@@ -215,6 +216,7 @@ module "orion_cloud_run" {
     MEGA_ORION_SERVER__MONOBASE_URL  = "https://git.${var.base_domain}"
     MEGA_ORION_SERVER__STORAGE_TYPE  = "gcs"
     MEGA_OAUTH__ALLOWED_CORS_ORIGINS = "https://app.${var.base_domain}"
+    MEGA_OBJECT_STORAGE__GCS__BUCKET = "${local.gcs_bucket}"
   }
 
   cpu            = "1"
@@ -364,6 +366,11 @@ resource "tls_private_key" "orion_vm_key" {
   rsa_bits  = 4096
 }
 
+resource "google_compute_address" "orion_vm_ip" {
+  name   = "${var.app_name}-orion-vm-ip"
+  region = var.region
+}
+
 resource "google_compute_instance" "orion_client_vm" {
   name         = "${var.app_name}-orion-client-vm"
   machine_type = "e2-medium"
@@ -372,14 +379,16 @@ resource "google_compute_instance" "orion_client_vm" {
   boot_disk {
     initialize_params {
       image = "debian-cloud/debian-13"
-      size  = 20
+      size  = 10
     }
   }
 
   network_interface {
     network    = local.network_name
     subnetwork = local.subnet_name
-    access_config {}
+    access_config {
+      nat_ip = google_compute_address.orion_vm_ip.address
+    }
   }
 
   metadata = {
@@ -403,6 +412,8 @@ resource "google_compute_instance" "orion_client_vm" {
   }
 }
 
+
+// 临时测试使用，之后需要删除
 resource "google_compute_instance" "orion_client_docker_vm" {
   name         = "${var.app_name}-orion-client-docker-vm"
   machine_type = "e2-medium"

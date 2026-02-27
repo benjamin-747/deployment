@@ -52,7 +52,7 @@ fi
 export PATH="/root/.cargo/bin:${PATH}"
 
 # Install Buck2
-BUCK2_VERSION="2025-06-01"
+BUCK2_VERSION="latest"
 ARCH="x86_64-unknown-linux-musl"
 curl -fsSL -o /usr/local/bin/buck2.zst "https://github.com/facebook/buck2/releases/download/${BUCK2_VERSION}/buck2-${ARCH}.zst"
 zstd -d /usr/local/bin/buck2.zst -o /usr/local/bin/buck2
