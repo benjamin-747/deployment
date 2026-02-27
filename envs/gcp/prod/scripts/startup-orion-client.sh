@@ -43,7 +43,14 @@ mkdir -p \
   /home/orion/orion-runner
 
 chown -R orion:orion /home/orion/orion-runner
-chmod +x /home/orion/orion-runner/run.sh
+
+# 条件设置权限（首次部署时文件可能不存在，等待 CI 部署）
+if [ -f /home/orion/orion-runner/run.sh ]; then
+    chmod +x /home/orion/orion-runner/run.sh
+fi
+if [ -f /home/orion/orion-runner/orion ]; then
+    chmod +x /home/orion/orion-runner/orion
+fi
 
 # Install Rust toolchain if missing
 if ! command -v rustc >/dev/null 2>&1; then
@@ -99,6 +106,8 @@ EOF
 
 systemctl daemon-reload
 systemctl enable orion-runner
-systemctl restart orion-runner
+
+
+systemctl restart orion-runner || echo "Note: Service start failed (waiting for CI deployment)"
 
 echo "===== Orion startup finished ====="

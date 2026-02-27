@@ -403,10 +403,8 @@ resource "google_compute_instance" "orion_client_vm" {
     host        = self.network_interface[0].access_config[0].nat_ip
   }
 
-  provisioner "file" {
-    source      = "${path.module}/orion-config"
-    destination = "/home/orion/orion-runner"
-  }
+
+
   service_account {
     scopes = ["cloud-platform"]
   }
