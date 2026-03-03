@@ -213,7 +213,7 @@ module "mega-web-sync-app" {
   cpu             = "256"
   memory          = "512"
   subnet_ids      = var.public_subnet_ids
-  desired_count = 0
+  desired_count   = 0
 
   security_group_ids = [module.sg.sg_id]
   environment = [
