@@ -1,0 +1,16 @@
+base_domain = "libra.tools"
+region      = "ap-southeast-2"
+db_username = "gitmega"
+db_password = "123"
+db_schema   = "rk8s_distribution"
+github_client_id = "123"
+github_client_secret = "123"
+
+
+vpc_id                      = "vpc-012345"
+vpc_cidr                    = "172.31.0.0/16"
+public_subnet_ids           = ["subnet-123", "subnet-123", "subnet-123"]
+existing_alb_arn            = "arn:aws:elasticloadbalancing:ap-southeast-2:123:loadbalancer/app/gitmono/123"
+existing_https_listener_arn = "arn:aws:elasticloadbalancing:ap-southeast-2:123:listener/app/gitmono/123/456"
+alb_sg                      = "sg-123"
+ecs_sg                      = "sg-456"
