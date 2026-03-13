@@ -43,7 +43,7 @@ module "distribution" {
   cluster_name    = "rk8s"
   task_family     = "rk8s-distribution"
   container_name  = "app"
-  container_image = "public.ecr.aws/m8q5m4u3/rk8s:distribution-0.1.0-pre-release"
+  container_image = "public.ecr.aws/m8q5m4u3/rk8s/distribution:latest"
   container_port  = 8968
   service_name    = "distribution"
   cpu             = "512"
@@ -81,6 +81,38 @@ module "distribution" {
       "name" : "OCI_REGISTRY_URL",
       "value" : "0.0.0.0"
     },
+    {
+      "name" : "JWT_SECRET",
+      "value" : "${var.jwt_secret}"
+    },
+    {
+      "name" : "JWT_LIFETIME_SECONDS",
+      "value" : "3600"
+    },
+    {
+      "name" : "OCI_REGISTRY_STORAGE",
+      "value" : "s3"
+    },
+    {
+      "name" : "OCI_REGISTRY_S3_BUCKET",
+      "value" : "${var.s3_bucket}"
+    },
+    {
+      "name" : "OCI_REGISTRY_S3_REGION",
+      "value" : "ap-southeast-2"
+    },
+    {
+      "name" : "OCI_REGISTRY_S3_ACCESS_KEY_ID",
+      "value" : "${var.s3_key}"
+    },
+    {
+      "name" : "OCI_REGISTRY_S3_SECRET_ACCESS_KEY",
+      "value" : "${var.s3_secret_key}"
+    },
+    {
+      "name": "RUST_LOG",
+      "value": "info"
+    }
   ]
 
   load_balancers = [{

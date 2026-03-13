@@ -81,7 +81,7 @@ module "mono-engine" {
   cluster_name    = "${var.app_suffix}-mega-app"
   task_family     = "${var.app_suffix}-mono-engine"
   container_name  = "app"
-  container_image = "public.ecr.aws/m8q5m4u3/mega:mono-0.1.0-pre-release"
+  container_image = "public.ecr.aws/m8q5m4u3/mega/mono-engine:latest"
   container_port  = 8000
   service_name    = "mono-engine"
   cpu             = "512"
@@ -182,7 +182,7 @@ module "mega-ui-app" {
   cluster_name    = "${var.app_suffix}-mega-app"
   task_family     = "${var.app_suffix}-mega-ui"
   container_name  = "app"
-  container_image = "public.ecr.aws/m8q5m4u3/mega:mega-ui-${var.ui_env}-0.1.0-pre-release"
+  container_image = "public.ecr.aws/m8q5m4u3/mega/mega-ui:${var.ui_env}-latest"
   container_port  = 3000
   service_name    = "mega-ui-service"
   cpu             = "512"
@@ -207,7 +207,7 @@ module "mega-web-sync-app" {
   cluster_name    = "${var.app_suffix}-mega-app"
   task_family     = "${var.app_suffix}-mega-web-sync"
   container_name  = "app"
-  container_image = "public.ecr.aws/m8q5m4u3/mega:mega-web-sync-server-0.1.0-pre-release"
+  container_image = "public.ecr.aws/m8q5m4u3/mega/web-sync-server:latest"
   container_port  = 9000
   service_name    = "mega-web-sync-service"
   cpu             = "256"
@@ -243,7 +243,7 @@ module "orion-server-app" {
   cluster_name    = "${var.app_suffix}-mega-app"
   task_family     = "${var.app_suffix}-orion-server"
   container_name  = "app"
-  container_image = "public.ecr.aws/m8q5m4u3/mega:orion-server-0.1.0-pre-release"
+  container_image = "public.ecr.aws/m8q5m4u3/mega/orion-server:latest"
   container_port  = 8004
   service_name    = "orion-server-service"
   cpu             = "256"
@@ -308,7 +308,7 @@ module "campsite-api-app" {
   cluster_name    = "${var.app_suffix}-mega-app"
   task_family     = "${var.app_suffix}-campsite-api"
   container_name  = "app"
-  container_image = "public.ecr.aws/m8q5m4u3/mega:campsite-0.1.0-pre-release"
+  container_image = "public.ecr.aws/m8q5m4u3/mega/campsite-api:latest"
   container_port  = 8080
   service_name    = "campsite-api-service"
   cpu             = "512"

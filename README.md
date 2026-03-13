@@ -128,8 +128,8 @@ Example outputs after deployment:
 
 ### Images (ECR Public -> Cloud Run)
 
-- backend (mono): `public.ecr.aws/m8q5m4u3/mega:mono-0.1.0-pre-release`
-- UI (Next.js): `public.ecr.aws/m8q5m4u3/mega:mega-ui-<env>-0.1.0-pre-release` (e.g. `staging`, `demo`, `openatom`, `gitmono`)
+- backend (mono): `public.ecr.aws/m8q5m4u3/mega/mono-engine:latest`
+- UI (Next.js): `public.ecr.aws/m8q5m4u3/mega/mega-ui:<env>-latest` (e.g. `staging`, `demo`, `openatom`, `gitmono`)
 
 Notes:
 

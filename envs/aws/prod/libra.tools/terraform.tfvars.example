@@ -5,7 +5,11 @@ db_password = "123"
 db_schema   = "rk8s_distribution"
 github_client_id = "123"
 github_client_secret = "123"
+jwt_secret = "jwt_secret"
 
+s3_key        = "s3_key"
+s3_secret_key = "s3_secret"
+s3_bucket     = "distribution-libra-tools"
 
 vpc_id                      = "vpc-012345"
 vpc_cidr                    = "172.31.0.0/16"
