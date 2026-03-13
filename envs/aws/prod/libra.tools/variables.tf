@@ -28,6 +28,20 @@ variable "github_client_secret" {
   type = string
 }
 
+variable "jwt_secret" {
+  type = string
+}
+
+variable "s3_key" {
+  type = string
+}
+variable "s3_secret_key" {
+  type = string
+}
+variable "s3_bucket" {
+  type = string
+}
+
 variable "vpc_id" {
   type = string
 }
