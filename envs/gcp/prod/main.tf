@@ -156,7 +156,7 @@ module "mono_cloud_run" {
   project_id   = var.project_id
   region       = var.region
   service_name = local.mono_service_name
-  image        = var.app_image
+  image        = "us-central1-docker.pkg.dev/infra-20250121-20260121-0235/mega/mono-engine:latest-amd64"
   env_vars = {
     MEGA_LOG__LEVEL                       = "info"
     MEGA_DATABASE__DB_URL                 = "postgres://${var.db_username}:${var.db_password}@${module.cloud_sql_pg.db_endpoint}:5432/${var.cloud_sql_pg_name}"
@@ -171,7 +171,7 @@ module "mono_cloud_run" {
     MEGA_AUTHENTICATION__ENABLE_HTTP_AUTH = true
   }
   cpu            = "1"
-  memory         = "1024Mi"
+  memory         = "512Mi"
   min_instances  = 1
   max_instances  = 2
   allow_unauth   = true
@@ -188,7 +188,7 @@ module "ui_cloud_run" {
   project_id   = var.project_id
   region       = var.region
   service_name = local.ui_service_name
-  image        = var.ui_image
+  image        = "us-central1-docker.pkg.dev/infra-20250121-20260121-0235/mega/mega-ui:buck2hub-latest-amd64"
   env_vars     = var.ui_env_vars
 
   cpu            = "1"
@@ -202,6 +202,30 @@ module "ui_cloud_run" {
   vpc_egress    = local.cloud_run_vpc_egress
 }
 
+module "mega-web-sync-app" {
+  source = "../../../modules/gcp/cloud_run"
+
+  project_id   = var.project_id
+  region       = var.region
+  service_name = local.notesync_service_name
+  image        = "us-central1-docker.pkg.dev/infra-20250121-20260121-0235/mega/web-sync-server:latest"
+  env_vars = {
+    API_URL  = "https://api.${var.base_domain}"
+    NODE_ENV = "production"
+  }
+
+  cpu            = "1"
+  memory         = "256Mi"
+  min_instances  = 0
+  max_instances  = 1
+  allow_unauth   = true
+  container_port = 9000
+
+  vpc_connector = local.enable_private_networking ? module.vpc_connector[0].name : null
+  vpc_egress    = local.cloud_run_vpc_egress
+}
+
+
 # Cloud Run: Orion Server
 module "orion_cloud_run" {
   source = "../../../modules/gcp/cloud_run"
@@ -209,7 +233,7 @@ module "orion_cloud_run" {
   project_id   = var.project_id
   region       = var.region
   service_name = local.orion_service_name
-  image        = var.orion_image
+  image        = "us-central1-docker.pkg.dev/infra-20250121-20260121-0235/mega/orion-server:latest-amd64"
   env_vars = {
     # MEGA_CONFIG                     = "/opt/mega/etc/config.toml"
     MEGA_ORION_SERVER__DB_URL        = "postgres://${var.db_username}:${var.db_password}@${module.cloud_sql_pg.db_endpoint}:5432/${var.cloud_sql_pg_name}"
@@ -220,7 +244,7 @@ module "orion_cloud_run" {
   }
 
   cpu            = "1"
-  memory         = "512Mi"
+  memory         = "256Mi"
   min_instances  = 0
   max_instances  = 2
   allow_unauth   = true
@@ -237,7 +261,7 @@ module "campsite_cloud_run" {
   project_id   = var.project_id
   region       = var.region
   service_name = local.campsite_service_name
-  image        = var.campsite_image
+  image        = "us-central1-docker.pkg.dev/infra-20250121-20260121-0235/mega/campsite-api:latest-amd64"
   env_vars = {
     DEV_APP_URL      = "https://app.${var.base_domain}"
     RAILS_ENV        = "staging-buck2hub"
@@ -289,6 +313,10 @@ module "lb_backends" {
     orion = {
       host    = "orion.${var.base_domain}"
       service = "${local.orion_service_name}"
+    }
+    sync = {
+      host    = "sync.${var.base_domain}"
+      service = "${local.notesync_service_name}"
     }
 
   }
@@ -351,10 +379,6 @@ output "orion_vm_public_ip" {
   value = google_compute_instance.orion_client_vm.network_interface[0].access_config[0].nat_ip
 }
 
-output "orion_docker_vm_public_ip" {
-  value = google_compute_instance.orion_client_docker_vm.network_interface[0].access_config[0].nat_ip
-}
-
 output "orion_vm_private_key_pem" {
   value     = tls_private_key.orion_vm_key.private_key_pem
   sensitive = true
@@ -372,13 +396,14 @@ resource "google_compute_address" "orion_vm_ip" {
 }
 
 resource "google_compute_instance" "orion_client_vm" {
-  name         = "${var.app_name}-orion-client-vm"
-  machine_type = "e2-medium"
-  zone         = var.zone
+  name                      = "${var.app_name}-orion-client-vm"
+  machine_type              = "e2-micro"
+  zone                      = var.zone
+  allow_stopping_for_update = true
 
   boot_disk {
     initialize_params {
-      image = "debian-cloud/debian-13"
+      image = "ubuntu-os-cloud/ubuntu-2404-lts-amd64"
       size  = 10
     }
   }
@@ -410,31 +435,3 @@ resource "google_compute_instance" "orion_client_vm" {
   }
 }
 
-
-// 临时测试使用，之后需要删除
-resource "google_compute_instance" "orion_client_docker_vm" {
-  name         = "${var.app_name}-orion-client-docker-vm"
-  machine_type = "e2-medium"
-  zone         = var.zone
-
-  boot_disk {
-    initialize_params {
-      image = "debian-cloud/debian-13"
-      size  = 10
-    }
-  }
-
-  network_interface {
-    network    = local.network_name
-    subnetwork = local.subnet_name
-    access_config {}
-  }
-
-  metadata = {
-    ssh-keys = "orion:${tls_private_key.orion_vm_key.public_key_openssh}"
-  }
-
-  service_account {
-    scopes = ["cloud-platform"]
-  }
-}

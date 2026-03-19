@@ -137,12 +137,6 @@ variable "filestore_reserved_ip_range" {
   default = null
 }
 
-# --- Cloud Run: Backend App ---
-variable "app_image" {
-  type    = string
-  default = ""
-}
-
 variable "mono_env" {
   type    = map(string)
   default = {}
@@ -171,12 +165,6 @@ variable "app_max_instances" {
 variable "app_allow_unauth" {
   type    = bool
   default = true
-}
-
-# --- Cloud Run: UI ---
-variable "ui_image" {
-  type    = string
-  default = ""
 }
 
 variable "ui_env_vars" {
@@ -209,21 +197,9 @@ variable "ui_allow_unauth" {
   default = true
 }
 
-# --- Cloud Run: Orion Server ---
-variable "orion_image" {
-  type    = string
-  default = ""
-}
-
 variable "orion_env_vars" {
   type    = map(string)
   default = {}
-}
-
-# --- Cloud Run: Campsite ---
-variable "campsite_image" {
-  type    = string
-  default = ""
 }
 
 variable "campsite_env_vars" {

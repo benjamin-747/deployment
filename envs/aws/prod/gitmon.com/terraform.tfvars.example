@@ -18,3 +18,7 @@ vpc_cidr                    = "172.31.0.0/16"
 public_subnet_ids           = ["subnet-123", "subnet-123", "subnet-123"]
 existing_alb_arn            = "arn:aws:elasticloadbalancing:ap-southeast-2:123:loadbalancer/app/gitmono/123"
 existing_https_listener_arn = "arn:aws:elasticloadbalancing:ap-southeast-2:123:listener/app/gitmono/123/456"
+
+# Optional: if empty, defaults to latest Ubuntu 24.04 (glibc 2.39+)
+ec2_ami            = ""
+ec2_instance_type  = "t3.micro"

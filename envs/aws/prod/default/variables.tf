@@ -49,3 +49,13 @@ variable "ui_env" {
 variable "app_suffix" {
   type = string
 }
+
+variable "ec2_ami" {
+  type    = string
+  default = ""
+}
+
+variable "ec2_instance_type" {
+  type    = string
+  default = "t3.micro"
+}

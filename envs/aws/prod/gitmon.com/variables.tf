@@ -81,3 +81,13 @@ variable "existing_https_listener_arn" {
   type    = string
   default = ""
 }
+
+variable "ec2_ami" {
+  type = string
+  default = ""
+}
+
+variable "ec2_instance_type" {
+  type    = string
+  default = "t3.micro"
+}

@@ -7,7 +7,7 @@ variable "region" {
 }
 
 variable "lb_name" {
-  type    = string
+  type = string
 }
 
 variable "lb_domain" {
@@ -77,6 +77,10 @@ resource "google_compute_url_map" "url_map" {
 resource "google_compute_global_address" "ip" {
   project = var.project_id
   name    = "${var.lb_name}-ip"
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 

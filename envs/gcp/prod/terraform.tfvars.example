@@ -13,13 +13,6 @@ zone   = "asia-east1-a"
 # GCS (object storage)
 gcs_force_destroy = false
 
-# Cloud Run Images
-# Note: GitHub Actions will push images directly to ${app_name}-repo.
-app_image      = "us-central1-docker.pkg.dev/infra-20250121-20260121-0235/mega/mono-engine:latest-amd64"
-ui_image       = "us-central1-docker.pkg.dev/infra-20250121-20260121-0235/mega/mega-ui:buck2hub-latest-amd64"
-orion_image    = "us-central1-docker.pkg.dev/infra-20250121-20260121-0235/mega/orion-server:latest-amd64"
-campsite_image = "us-central1-docker.pkg.dev/infra-20250121-20260121-0235/mega/campsite-api:latest-amd64"
-
 # Database (Cloud SQL)
 cloud_sql_pg_name = "buck2hub"
 cloud_sql_mysql_name = "campsite_api_buck2hub"

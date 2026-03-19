@@ -24,6 +24,53 @@ module "efs" {
   subnet_ids = var.public_subnet_ids
 }
 
+module "gitmono_orion" {
+  source = "../../../../modules/compute/aws/ec2"
+
+  name          = "gitmono-orion"
+  ami           = var.ec2_ami
+  instance_type = var.ec2_instance_type
+  vpc_id        = var.vpc_id
+  subnet_ids    = var.public_subnet_ids
+}
+
+resource "aws_eip" "gitmono_orion" {
+  domain = "vpc"
+  tags = {
+    Name = "${var.app_suffix}-gitmono-orion"
+  }
+}
+
+resource "aws_eip_association" "gitmono_orion" {
+  allocation_id = aws_eip.gitmono_orion.id
+  instance_id   = module.gitmono_orion.instance_id
+}
+
+
+module "gitmega_orion" {
+  source = "../../../../modules/compute/aws/ec2"
+
+  # Unique AWS resource names inside this env
+  name          = "gitmega-orion"
+  ami           = var.ec2_ami
+  instance_type = var.ec2_instance_type
+
+  vpc_id     = var.vpc_id
+  subnet_ids = var.public_subnet_ids
+}
+
+resource "aws_eip" "gitmega_orion" {
+  domain = "vpc"
+  tags = {
+    Name = "${var.app_suffix}-gitmega-orion"
+  }
+}
+
+resource "aws_eip_association" "gitmega_orion" {
+  allocation_id = aws_eip.gitmega_orion.id
+  instance_id   = module.gitmega_orion.instance_id
+}
+
 
 module "acm" {
   source      = "../../../../modules/security/aws/acm"
@@ -213,17 +260,17 @@ module "mega-web-sync-app" {
   cpu             = "256"
   memory          = "512"
   subnet_ids      = var.public_subnet_ids
-  desired_count   = 0
+  desired_count   = 1
 
   security_group_ids = [module.sg.sg_id]
   environment = [
     {
-      "name" : "APP_ENV",
-      "value" : "development"
+      "name" : "API_URL",
+      "value" : "https://api.gitmono.com"
     },
     {
-      "name" : "NEXT_PUBLIC_SYNC_URL",
-      "value" : "ws://sync.${var.base_domain}"
+      "name" : "NODE_ENV",
+      "value" : "production"
     },
   ]
   load_balancers = [{
@@ -346,4 +393,20 @@ module "campsite-api-app" {
     priority         = 501
   }]
   alb_listener_arn = module.alb.https_listener_arn
+}
+
+output "gitmono_orion_instance_id" {
+  value = module.gitmono_orion.instance_id
+}
+
+output "gitmono_orion_public_ip" {
+  value = aws_eip.gitmono_orion.public_ip
+}
+
+output "gitmega_orion_instance_id" {
+  value = module.gitmega_orion.instance_id
+}
+
+output "gitmega_orion_public_ip" {
+  value = aws_eip.gitmega_orion.public_ip
 }
