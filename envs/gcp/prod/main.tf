@@ -235,7 +235,6 @@ module "orion_cloud_run" {
   service_name = local.orion_service_name
   image        = "us-central1-docker.pkg.dev/infra-20250121-20260121-0235/mega/orion-server:latest-amd64"
   env_vars = {
-    # MEGA_CONFIG                     = "/opt/mega/etc/config.toml"
     MEGA_ORION_SERVER__DB_URL        = "postgres://${var.db_username}:${var.db_password}@${module.cloud_sql_pg.db_endpoint}:5432/${var.cloud_sql_pg_name}"
     MEGA_ORION_SERVER__MONOBASE_URL  = "https://git.${var.base_domain}"
     MEGA_ORION_SERVER__STORAGE_TYPE  = "gcs"

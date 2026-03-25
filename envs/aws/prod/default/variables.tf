@@ -16,7 +16,7 @@ variable "db_password" {
   sensitive = true
 }
 variable "db_schema" {
-  type      = string
+  type = string
 }
 
 variable "s3_key" {
@@ -58,4 +58,13 @@ variable "ec2_ami" {
 variable "ec2_instance_type" {
   type    = string
   default = "t3.micro"
+}
+
+variable "ecs_fargate_tasks" {
+  type = map(object({
+    cpu    = string
+    memory = string
+  }))
+  default     = {}
+  description = "Optional overrides. Keys: mono_engine, mega_ui, mega_web_sync, orion_server, campsite_api"
 }

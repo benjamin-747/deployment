@@ -32,6 +32,12 @@ variable "jwt_secret" {
   type = string
 }
 
+variable "internal_verify_token" {
+  type        = string
+  sensitive   = true
+  description = "Shared secret for internal service verification (distribution)"
+}
+
 variable "s3_key" {
   type = string
 }

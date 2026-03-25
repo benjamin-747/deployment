@@ -90,6 +90,10 @@ module "distribution" {
       "value" : "3600"
     },
     {
+      "name" : "INTERNAL_VERIFY_TOKEN",
+      "value" : "${var.internal_verify_token}"
+    },
+    {
       "name" : "OCI_REGISTRY_STORAGE",
       "value" : "s3"
     },
@@ -110,8 +114,12 @@ module "distribution" {
       "value" : "${var.s3_secret_key}"
     },
     {
-      "name": "RUST_LOG",
-      "value": "info"
+      "name" : "OCI_REGISTRY_AUTH_API_URL",
+      "value" : "https://libra.tools/api/internal/verify"
+    },
+    {
+      "name" : "RUST_LOG",
+      "value" : "info"
     }
   ]
 

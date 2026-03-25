@@ -4,6 +4,18 @@ locals {
   orion_host         = "orion.${var.base_domain}"
   campsite_host      = "api.${var.base_domain}"
   campsite_auth_host = "auth.${var.base_domain}"
+  note_sync_host     = "sync.${var.base_domain}"
+
+  ecs_fargate = merge(
+    {
+      mono_engine   = { cpu = "512", memory = "1024" }
+      mega_ui       = { cpu = "256", memory = "512" }
+      mega_web_sync = { cpu = "256", memory = "512" }
+      orion_server  = { cpu = "256", memory = "512" }
+      campsite_api  = { cpu = "512", memory = "1024" }
+    },
+    var.ecs_fargate_tasks
+  )
 }
 
 provider "aws" {
@@ -131,12 +143,16 @@ module "mono-engine" {
   container_image = "public.ecr.aws/m8q5m4u3/mega/mono-engine:latest"
   container_port  = 8000
   service_name    = "mono-engine"
-  cpu             = "512"
-  memory          = "1024"
+  cpu             = local.ecs_fargate["mono_engine"].cpu
+  memory          = local.ecs_fargate["mono_engine"].memory
   subnet_ids      = var.public_subnet_ids
 
   security_group_ids = [module.sg.sg_id]
   environment = [
+    {
+      "name" : "MEGA_LOG__LEVEL",
+      "value" : "info"
+    },
     {
       "name" : "MEGA_AUTHENTICATION__ENABLE_HTTP_PUSH",
       "value" : "true"
@@ -146,52 +162,48 @@ module "mono-engine" {
       "value" : "true"
     },
     {
-      "name" : "MEGA_DATABASE__ACQUIRE_TIMEOUT",
-      "value" : "3"
-    },
-    {
-      "name" : "MEGA_DATABASE__CONNECT_TIMEOUT",
-      "value" : "3"
-    },
-    {
       "name" : "MEGA_DATABASE__DB_URL",
       "value" : "postgres://${var.db_username}:${var.db_password}@gitmega.c3aqu4m6k57p.ap-southeast-2.rds.amazonaws.com/${var.db_schema}?sslmode=require"
-    },
-    {
-      "name" : "MEGA_LFS__STORAGE_TYPE",
-      "value" : "s3"
-    },
-    {
-      "name" : "MEGA_LOG__LEVEL",
-      "value" : "info"
     },
     {
       "name" : "MEGA_MONOREPO__STORAGE_TYPE",
       "value" : "s3"
     },
     {
-      "name" : "MEGA_REDIS__URL",
-      "value" : "rediss://${var.redis_endpoint}"
+      "name" : "MEGA_BUILD__ORION_SERVER",
+      "value" : "https://${local.orion_host}"
     },
     {
-      "name" : "MEGA_S3__ACCESS_KEY_ID",
+      "name" : "MEGA_LFS__STORAGE_TYPE",
+      "value" : "s3"
+    },
+    {
+      "name" : "MEGA_OBJECT_STORAGE__S3__ACCESS_KEY_ID",
       "value" : "${var.s3_key}"
     },
     {
-      "name" : "MEGA_S3__BUCKET",
+      "name" : "MEGA_OBJECT_STORAGE__S3__SECRET_ACCESS_KEY",
+      "value" : "${var.s3_secret_key}"
+    },
+    {
+      "name" : "MEGA_OBJECT_STORAGE__S3__BUCKET",
       "value" : "${var.s3_bucket}"
     },
     {
-      "name" : "MEGA_S3__ENDPOINT_URL",
-      "value" : ""
-    },
-    {
-      "name" : "MEGA_S3__REGION",
+      "name" : "MEGA_OBJECT_STORAGE__S3__REGION",
       "value" : "${var.region}"
     },
     {
-      "name" : "MEGA_S3__SECRET_ACCESS_KEY",
-      "value" : "${var.s3_secret_key}"
+      "name" : "MEGA_OAUTH__CAMPSITE_API_DOMAIN",
+      "value" : "https://${local.campsite_host}"
+    },
+    {
+      "name" : "MEGA_OAUTH__ALLOWED_CORS_ORIGINS",
+      "value" : "https://${local.ui_host}"
+    },
+    {
+      "name" : "MEGA_REDIS__URL",
+      "value" : "rediss://${var.redis_endpoint}"
     },
   ]
 
@@ -214,11 +226,6 @@ module "mono-engine" {
       containerPath = "/opt/mega/vault"
       readOnly      = false
       sourceVolume  = "volumn1"
-    },
-    {
-      containerPath = "/opt/mega/etc"
-      readOnly      = false
-      sourceVolume  = "volumn1"
     }
   ]
 }
@@ -232,8 +239,8 @@ module "mega-ui-app" {
   container_image = "public.ecr.aws/m8q5m4u3/mega/mega-ui:${var.ui_env}-latest"
   container_port  = 3000
   service_name    = "mega-ui-service"
-  cpu             = "512"
-  memory          = "1024"
+  cpu             = local.ecs_fargate["mega_ui"].cpu
+  memory          = local.ecs_fargate["mega_ui"].memory
   subnet_ids      = var.public_subnet_ids
 
   security_group_ids = [module.sg.sg_id]
@@ -257,8 +264,8 @@ module "mega-web-sync-app" {
   container_image = "public.ecr.aws/m8q5m4u3/mega/web-sync-server:latest"
   container_port  = 9000
   service_name    = "mega-web-sync-service"
-  cpu             = "256"
-  memory          = "512"
+  cpu             = local.ecs_fargate["mega_web_sync"].cpu
+  memory          = local.ecs_fargate["mega_web_sync"].memory
   subnet_ids      = var.public_subnet_ids
   desired_count   = 1
 
@@ -277,7 +284,7 @@ module "mega-web-sync-app" {
     target_group_arn = module.alb.target_group_arns["sync_server"]
     container_name   = "app"
     container_port   = 9000
-    host_headers     = ["sync.${var.base_domain}"]
+    host_headers     = ["${local.note_sync_host}"]
     priority         = 301
   }]
   alb_listener_arn = module.alb.https_listener_arn
@@ -293,16 +300,12 @@ module "orion-server-app" {
   container_image = "public.ecr.aws/m8q5m4u3/mega/orion-server:latest"
   container_port  = 8004
   service_name    = "orion-server-service"
-  cpu             = "256"
-  memory          = "512"
+  cpu             = local.ecs_fargate["orion_server"].cpu
+  memory          = local.ecs_fargate["orion_server"].memory
   subnet_ids      = var.public_subnet_ids
 
   security_group_ids = [module.sg.sg_id]
   environment = [
-    {
-      "name" : "MEGA_CONFIG",
-      "value" : "/opt/mega/etc/config.toml"
-    },
     {
       "name" : "MEGA_OBJECT_STORAGE__S3_BUCKET",
       "value" : "${var.s3_bucket}"
@@ -324,6 +327,10 @@ module "orion-server-app" {
       "name" : "MEGA_ORION_SERVER__STORAGE_TYPE",
       "value" : "s3"
     },
+    {
+      "name" : "MEGA_OAUTH__ALLOWED_CORS_ORIGINS",
+      "value" : "https://${local.ui_host}"
+    },
   ]
   load_balancers = [{
     target_group_arn = module.alb.target_group_arns["orion_server"]
@@ -333,19 +340,6 @@ module "orion-server-app" {
     priority         = 401
   }]
   alb_listener_arn = module.alb.https_listener_arn
-
-  efs_volume = {
-    name           = "volumn1"
-    file_system_id = module.efs.file_system_id
-    root_directory = "/"
-  }
-  mount_points = [
-    {
-      containerPath = "/opt/mega/etc"
-      readOnly      = false
-      sourceVolume  = "volumn1"
-    }
-  ]
 }
 
 
@@ -358,8 +352,8 @@ module "campsite-api-app" {
   container_image = "public.ecr.aws/m8q5m4u3/mega/campsite-api:latest"
   container_port  = 8080
   service_name    = "campsite-api-service"
-  cpu             = "512"
-  memory          = "1024"
+  cpu             = local.ecs_fargate["campsite_api"].cpu
+  memory          = local.ecs_fargate["campsite_api"].memory
   subnet_ids      = var.public_subnet_ids
 
   security_group_ids = [module.sg.sg_id]

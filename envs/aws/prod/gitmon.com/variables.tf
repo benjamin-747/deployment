@@ -91,3 +91,13 @@ variable "ec2_instance_type" {
   type    = string
   default = "t3.micro"
 }
+
+# ECS Fargate: per-service cpu (AWS units) and memory (MiB). Merge with defaults in main.tf locals.
+variable "ecs_fargate_tasks" {
+  type = map(object({
+    cpu    = string
+    memory = string
+  }))
+  default     = {}
+  description = "Optional overrides. Keys: mono_engine, mega_ui, mega_web_sync, orion_server, campsite_api"
+}

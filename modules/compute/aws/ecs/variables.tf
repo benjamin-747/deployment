@@ -18,8 +18,14 @@ variable "container_image" {}
 variable "container_port" {}
 variable "service_name" {}
 variable "desired_count" { default = 1 }
-variable "cpu" {}
-variable "memory" {}
+variable "cpu" {
+  type        = string
+  description = "Fargate CPU units (e.g. 256, 512, 1024)"
+}
+variable "memory" {
+  type        = string
+  description = "Fargate memory in MiB (e.g. 512, 1024)"
+}
 variable "subnet_ids" {
   description = "List of subnet IDs for ECS service"
   type        = list(string)
