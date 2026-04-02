@@ -42,6 +42,11 @@ mkdir -p \
   /workspace/mount \
   /home/orion/orion-runner
 
+# Ensure orion exists before chown (metadata ssh-keys may create it later; avoid set -e exit here).
+if ! id -u orion &>/dev/null; then
+  useradd -m -s /bin/bash orion
+fi
+
 chown -R orion:orion /home/orion/orion-runner
 
 # 条件设置权限（首次部署时文件可能不存在，等待 CI 部署）

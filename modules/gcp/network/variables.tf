@@ -18,14 +18,6 @@ variable "subnet_cidr" {
   type = string
 }
 
-variable "pods_secondary_range" {
-  type = string
-}
-
-variable "services_secondary_range" {
-  type = string
-}
-
 variable "public_subnet_cidrs" {
   type    = list(string)
   default = []
@@ -49,19 +41,4 @@ variable "create_nat" {
 variable "allow_ssh" {
   type    = bool
   default = false
-}
-
-variable "gke_node_tags" {
-  type    = list(string)
-  default = []
-}
-
-variable "health_check_source_ranges" {
-  type    = list(string)
-  default = ["130.211.0.0/22", "35.191.0.0/16"]
-}
-
-variable "health_check_ports" {
-  type    = list(string)
-  default = ["80", "443"]
 }

@@ -6,4 +6,8 @@ resource "google_redis_instance" "this" {
   memory_size_gb          = var.memory_size_gb
   authorized_network      = var.network
   transit_encryption_mode = var.transit_encryption_mode
+
+  timeouts {
+    delete = "60m"
+  }
 }

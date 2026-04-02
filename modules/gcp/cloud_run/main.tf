@@ -31,12 +31,12 @@ variable "memory" {
 
 variable "min_instances" {
   type    = number
-  default = 1
+  default = 0
 }
 
 variable "max_instances" {
   type    = number
-  default = 10
+  default = 2
 }
 
 variable "ingress" {
@@ -75,13 +75,7 @@ resource "google_cloud_run_service" "this" {
   project  = var.project_id
   location = var.region
 
-  lifecycle {
-    ignore_changes = [
-      template[0].metadata[0].annotations["run.googleapis.com/client-name"],
-      template[0].metadata[0].annotations["run.googleapis.com/client-version"],
-    ]
-  }
-  
+
   template {
     spec {
       containers {
@@ -97,7 +91,7 @@ resource "google_cloud_run_service" "this" {
         }
 
         command = var.enable_migrations ? ["/bin/sh", "-c"] : null
-        args    = var.enable_migrations ? [
+        args = var.enable_migrations ? [
           <<-EOT
             bin/rails db:create
             bin/rails db:migrate

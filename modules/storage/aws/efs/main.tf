@@ -1,9 +1,9 @@
 
 resource "aws_efs_file_system" "this" {
-  creation_token = var.name
+  creation_token   = var.name
   performance_mode = "generalPurpose"
   throughput_mode  = "bursting"
-  encrypted = true
+  encrypted        = true
   tags = {
     Name = var.name
   }

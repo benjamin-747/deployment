@@ -8,24 +8,6 @@ variable "app_name" {
   description = "The name of the application, used as a prefix for all resources"
 }
 
-variable "enable_logging" {
-  type        = bool
-  default     = true
-  description = "Enable Cloud Logging for GKE"
-}
-
-variable "enable_monitoring" {
-  type        = bool
-  default     = true
-  description = "Enable Cloud Monitoring for GKE"
-}
-
-variable "enable_alerts" {
-  type        = bool
-  default     = false
-  description = "Enable example alert policies"
-}
-
 variable "alert_notification_channels" {
   type        = list(string)
   default     = []
@@ -43,4 +25,3 @@ variable "log_sink_destination" {
   default     = ""
   description = "Optional log sink destination (e.g., bigquery.googleapis.com/projects/PROJECT_ID/datasets/DATASET_ID)"
 }
-

@@ -22,6 +22,17 @@ provider "aws" {
   region = var.region
 }
 
+# SSH keys: ec2_ssh_key module is separate from ec2 so replacing the instance does not rotate keys.
+module "gitmono_orion_key" {
+  source = "../../../../modules/compute/aws/ec2_ssh_key"
+  name   = "gitmono-orion"
+}
+
+module "gitmega_orion_key" {
+  source = "../../../../modules/compute/aws/ec2_ssh_key"
+  name   = "gitmega-orion"
+}
+
 // alb 中需要手动添加新创建的这个sg
 module "sg" {
   source = "../../../../modules/security/aws/security_group"
@@ -39,11 +50,13 @@ module "efs" {
 module "gitmono_orion" {
   source = "../../../../modules/compute/aws/ec2"
 
-  name          = "gitmono-orion"
-  ami           = var.ec2_ami
-  instance_type = var.ec2_instance_type
-  vpc_id        = var.vpc_id
-  subnet_ids    = var.public_subnet_ids
+  name                 = "gitmono-orion"
+  ami                  = var.ec2_ami
+  instance_type        = var.ec2_instance_type
+  vpc_id               = var.vpc_id
+  subnet_ids           = var.public_subnet_ids
+  key_name             = module.gitmono_orion_key.key_name
+  orion_ssh_public_key = module.gitmono_orion_key.public_key_openssh
 }
 
 resource "aws_eip" "gitmono_orion" {
@@ -63,12 +76,13 @@ module "gitmega_orion" {
   source = "../../../../modules/compute/aws/ec2"
 
   # Unique AWS resource names inside this env
-  name          = "gitmega-orion"
-  ami           = var.ec2_ami
-  instance_type = var.ec2_instance_type
-
-  vpc_id     = var.vpc_id
-  subnet_ids = var.public_subnet_ids
+  name                 = "gitmega-orion"
+  ami                  = var.ec2_ami
+  instance_type        = var.ec2_instance_type
+  vpc_id               = var.vpc_id
+  subnet_ids           = var.public_subnet_ids
+  key_name             = module.gitmega_orion_key.key_name
+  orion_ssh_public_key = module.gitmega_orion_key.public_key_openssh
 }
 
 resource "aws_eip" "gitmega_orion" {
@@ -307,12 +321,19 @@ module "orion-server-app" {
   security_group_ids = [module.sg.sg_id]
   environment = [
     {
-      "name" : "MEGA_OBJECT_STORAGE__S3_BUCKET",
+      "name" : "MEGA_OBJECT_STORAGE__S3__ACCESS_KEY_ID",
+      "value" : "${var.s3_key}"
+    },
+    {
+      "name" : "MEGA_OBJECT_STORAGE__S3__SECRET_ACCESS_KEY",
+      "value" : "${var.s3_secret_key}"
+    },
+    {
+      "name" : "MEGA_OBJECT_STORAGE__S3__BUCKET",
       "value" : "${var.s3_bucket}"
     },
-
     {
-      "name" : "MEGA_OBJECT_STORAGE__S3_REGION",
+      "name" : "MEGA_OBJECT_STORAGE__S3__REGION",
       "value" : "${var.region}"
     },
     {

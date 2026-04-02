@@ -1,23 +1,15 @@
-locals {
-  enable_logging    = var.enable_logging
-  enable_monitoring = var.enable_monitoring
-  enable_alerts     = var.enable_alerts
-}
-
 resource "google_project_service" "logging" {
-  count   = local.enable_logging ? 1 : 0
   project = var.project_id
   service = "logging.googleapis.com"
 }
 
 resource "google_project_service" "monitoring" {
-  count   = local.enable_monitoring ? 1 : 0
   project = var.project_id
   service = "monitoring.googleapis.com"
 }
 
 resource "google_logging_project_sink" "this" {
-  count       = var.enable_logging && var.log_sink_destination != "" ? 1 : 0
+  count       = var.log_sink_destination != "" ? 1 : 0
   name        = var.log_sink_name != "" ? var.log_sink_name : "${var.app_name}-log-sink"
   project     = var.project_id
   destination = var.log_sink_destination
@@ -25,10 +17,9 @@ resource "google_logging_project_sink" "this" {
 }
 
 resource "google_monitoring_alert_policy" "pod_restart_high" {
-  count          = local.enable_alerts ? 1 : 0
-  display_name   = "${var.app_name} Cloud Run Instance Restart Rate High"
-  combiner       = "OR"
-  enabled        = true
+  display_name          = "${var.app_name} Cloud Run Instance Restart Rate High"
+  combiner              = "OR"
+  enabled               = true
   notification_channels = var.alert_notification_channels
 
   conditions {
@@ -53,10 +44,9 @@ resource "google_monitoring_alert_policy" "pod_restart_high" {
 }
 
 resource "google_monitoring_alert_policy" "sql_connection_failures" {
-  count          = local.enable_alerts ? 1 : 0
-  display_name   = "${var.app_name} Cloud SQL Connection Failures"
-  combiner       = "OR"
-  enabled        = true
+  display_name          = "${var.app_name} Cloud SQL Connection Failures"
+  combiner              = "OR"
+  enabled               = true
   notification_channels = var.alert_notification_channels
 
   conditions {
@@ -79,4 +69,3 @@ resource "google_monitoring_alert_policy" "sql_connection_failures" {
     content = "Cloud SQL connection issues detected. Check network connectivity and IAM permissions."
   }
 }
-

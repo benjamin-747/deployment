@@ -259,12 +259,12 @@ module "orion-server-app" {
   security_group_ids = [module.sg.sg_id]
   environment = [
     {
-      "name" : "MEGA_OBJECT_STORAGE__S3_BUCKET",
+      "name" : "MEGA_OBJECT_STORAGE__S3__BUCKET",
       "value" : "${var.s3_bucket}"
     },
 
     {
-      "name" : "MEGA_OBJECT_STORAGE__S3_REGION",
+      "name" : "MEGA_OBJECT_STORAGE__S3__REGION",
       "value" : "${var.region}"
     },
     {

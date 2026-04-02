@@ -13,9 +13,9 @@ variable "service_accounts" {
     display_name = optional(string)
     description  = optional(string)
     roles        = optional(list(string), [])
-    wi_bindings  = optional(list(object({
-      namespace                 = string
-      k8s_service_account_name  = string
+    wi_bindings = optional(list(object({
+      namespace                = string
+      k8s_service_account_name = string
     })), [])
   }))
   description = "Service accounts to create and their IAM roles / Workload Identity bindings"

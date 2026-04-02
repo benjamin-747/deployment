@@ -105,8 +105,8 @@ cp terraform.tfvars.example terraform.tfvars
 Sensitive values should be provided via environment variables when using CI/CD:
 
 ```bash
-export TF_VAR_db_username="mega_user"
-export TF_VAR_db_password="your-db-password"
+export TF_VAR_cloud_sql_username="mega_user"
+export TF_VAR_cloud_sql_password="your-db-password"
 export TF_VAR_rails_master_key="your-rails-master-key"
 ```
 

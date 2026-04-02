@@ -6,7 +6,7 @@ resource "aws_instance" "this" {
   subnet_id                   = element(var.subnet_ids, 0)
   vpc_security_group_ids      = [aws_security_group.ec2.id]
   associate_public_ip_address = true
-  key_name                    = aws_key_pair.generated.key_name
+  key_name                    = var.key_name
   user_data_replace_on_change = true
 
 
@@ -19,7 +19,7 @@ users:
     sudo: ALL=(ALL) NOPASSWD:ALL
     shell: /bin/bash
     ssh_authorized_keys:
-      - ${tls_private_key.ec2_key.public_key_openssh}
+      - ${var.orion_ssh_public_key}
 
 runcmd:
   - |

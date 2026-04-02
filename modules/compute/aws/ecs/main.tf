@@ -72,10 +72,10 @@ resource "aws_ecs_task_definition" "app" {
 }
 
 resource "aws_ecs_service" "app" {
-  name            = var.service_name
-  cluster         = aws_ecs_cluster.main.id
-  task_definition = aws_ecs_task_definition.app.arn
-  desired_count   = var.desired_count
+  name                 = var.service_name
+  cluster              = aws_ecs_cluster.main.id
+  task_definition      = aws_ecs_task_definition.app.arn
+  desired_count        = var.desired_count
   force_new_deployment = true
 
   capacity_provider_strategy {

@@ -57,12 +57,12 @@ variable "redis_endpoint" {
 
 
 variable "vpc_id" {
-  type      = string
+  type = string
 }
 
 
 variable "vpc_cidr" {
-  type      = string
+  type = string
 }
 
 
@@ -83,7 +83,7 @@ variable "existing_https_listener_arn" {
 }
 
 variable "ec2_ami" {
-  type = string
+  type    = string
   default = ""
 }
 

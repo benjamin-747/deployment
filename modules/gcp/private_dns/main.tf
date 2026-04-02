@@ -1,7 +1,7 @@
 # --- Private DNS Zone ---
 resource "google_dns_managed_zone" "this" {
-  name     = var.zone_name
-  dns_name = var.dns_name
+  name       = var.zone_name
+  dns_name   = var.dns_name
   visibility = "private"
 
   private_visibility_config {

@@ -1,32 +1,53 @@
-# Example variables for prod environment (Cloud Run)
-# Only list variables commonly customized – others keep defaults.
+# Example variables for prod (GCP Cloud Run). Copy to terraform.tfvars (not committed).
 
-# Required project and domain
+# --- Core ---
 project_id  = "infra-20250121-20260121-0235"
 app_name    = "buck2-hub"
-base_domain = "buck2hub.com" # used for certificates / app config
+base_domain = "buck2hub.com"
 
-# Region / zone (optional overrides)
-region = "asia-east1"
-zone   = "asia-east1-a"
+region = "asia-east2"
+zone   = "asia-east2-a"
 
-# GCS (object storage)
+# --- Orion client VM ---
+# orion_vm_machine_type        = "e2-micro"
+# orion_vm_boot_disk_size_gb   = 10
+# orion_vm_ssh_allowed_cidrs   = ["203.0.113.10/32"]  # default 0.0.0.0/0; narrow in prod
+
+# --- Cloud Run ---
+# cloud_run_resources = [
+#   { service = "mono", cpu = "1", memory = "512Mi" },
+#   { service = "ui", cpu = "1", memory = "512Mi" },
+#   { service = "notesync", cpu = "1", memory = "256Mi" },
+#   { service = "orion", cpu = "1", memory = "256Mi" },
+#   { service = "campsite", cpu = "1", memory = "1024Mi" },
+# ]
+
+# --- GCS ---
 gcs_force_destroy = false
 
-# Database (Cloud SQL)
-cloud_sql_pg_name = "buck2hub"
+# --- Cloud SQL ---
+cloud_sql_pg_name    = "buck2hub"
 cloud_sql_mysql_name = "campsite_api_buck2hub"
-db_username       = "gitmega"
-db_password       = "your-prod-db-password"
+cloud_sql_username   = "gitmega"
+cloud_sql_password   = "your-prod-db-password"
 
-# Testing (option 1): enable public IP while keeping private networking to avoid empty network references
+# cloud_sql_pg_tier         = "db-f1-micro"
+# cloud_sql_pg_disk_size_gb = 10
 cloud_sql_enable_public_ip = true
 
-# VPC Connector CIDR (Required for the module to avoid 400 error)
-vpc_connector_cidr = "10.8.0.0/28"
+# --- Network ---
+# vpc_subnet_cidr                 = "10.40.0.0/16"
+vpc_serverless_connector_cidr = "10.8.0.0/28"
 
-# Redis (Memorystore)
+# --- Redis ---
 redis_memory_size_gb = 1
 
-# Rails secrets (sensitive)
+# --- Load balancer ---
+# load_balancer_enabled = true
+
+# --- Monitoring ---
+# monitoring_alert_notification_channel_ids = ["projects/.../notificationChannels/..."]
+# monitoring_log_sink_destination           = "bigquery.googleapis.com/projects/.../datasets/..."
+
+# --- Secrets ---
 rails_master_key = "your-prod-rails-master-key"

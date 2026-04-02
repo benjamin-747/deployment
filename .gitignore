@@ -19,7 +19,7 @@ secrets.auto.tfvars
 *.key
 *.pub
 *.crt
-
+*ed25519
 # Override files
 override.tf
 override.tf.json

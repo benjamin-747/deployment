@@ -5,11 +5,6 @@ locals {
 
   public_subnet_map  = { for idx, cidr in var.public_subnet_cidrs : idx => cidr }
   private_subnet_map = { for idx, cidr in var.private_subnet_cidrs : idx => cidr }
-
-  default_gke_node_tags   = ["${var.app_name}-gke"]
-  effective_gke_node_tags = length(var.gke_node_tags) > 0 ? var.gke_node_tags : local.default_gke_node_tags
-
-  health_check_port_numbers = [for p in var.health_check_ports : tonumber(p)]
 }
 
 resource "google_compute_network" "this" {
@@ -25,16 +20,6 @@ resource "google_compute_subnetwork" "this" {
   ip_cidr_range = var.subnet_cidr
   region        = var.region
   network       = google_compute_network.this.id
-
-  secondary_ip_range {
-    range_name    = "${var.app_name}-pods"
-    ip_cidr_range = var.pods_secondary_range
-  }
-
-  secondary_ip_range {
-    range_name    = "${var.app_name}-services"
-    ip_cidr_range = var.services_secondary_range
-  }
 }
 
 resource "google_compute_subnetwork" "public" {
@@ -121,20 +106,6 @@ resource "google_compute_firewall" "allow_ssh" {
 
   source_ranges = ["0.0.0.0/0"]
 }
-
-resource "google_compute_firewall" "allow_health_checks" {
-  name    = "${var.network_name}-allow-health-checks"
-  network = google_compute_network.this.self_link
-
-  allow {
-    protocol = "tcp"
-    ports    = var.health_check_ports
-  }
-
-  source_ranges = var.health_check_source_ranges
-  target_tags   = local.effective_gke_node_tags
-}
-
 
 resource "google_compute_global_address" "private_service_range" {
   name          = "cloudsql-db-private-range"

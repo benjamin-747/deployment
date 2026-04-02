@@ -22,6 +22,19 @@ variable "routes" {
   }))
 }
 
+# All resources in this file must stay in Terraform state together. If https forwarding rule,
+# target HTTPS proxy, or global IP are missing from state while url_map still exists in GCP,
+# destroy will try to delete url_map first and fail with resourceInUseByAnotherResource.
+
+locals {
+  # Stable fingerprints so cert/url_map names change when routes/domains change.
+  # create_before_destroy + new names lets GCP detach the HTTPS proxy before old resources are destroyed.
+  ssl_domains_sig = substr(sha256(join(",", sort([for _, r in var.routes : r.host]))), 0, 8)
+  routes_sig = substr(sha256(jsonencode({
+    for k in sort(keys(var.routes)) : k => var.routes[k]
+  })), 0, 8)
+}
+
 resource "google_compute_region_network_endpoint_group" "neg" {
   for_each              = var.routes
   project               = var.project_id
@@ -52,9 +65,16 @@ locals {
 
 resource "google_compute_url_map" "url_map" {
   project = var.project_id
-  name    = "${var.lb_name}-urlmap"
+  name    = "${var.lb_name}-urlmap-${local.routes_sig}"
 
   default_service = google_compute_backend_service.bs[local.first_route_key].self_link
+
+  # After the HTTPS proxy is gone, destroy url_map before cert so two updates never race GCP teardown.
+  depends_on = [google_compute_managed_ssl_certificate.cert]
+
+  lifecycle {
+    create_before_destroy = true
+  }
 
   dynamic "host_rule" {
     for_each = var.routes
@@ -78,21 +98,22 @@ resource "google_compute_global_address" "ip" {
   project = var.project_id
   name    = "${var.lb_name}-ip"
 
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 
 resource "google_compute_managed_ssl_certificate" "cert" {
   project = var.project_id
-  name    = "${var.lb_name}-cert"
+  name    = "${var.lb_name}-cert-${local.ssl_domains_sig}"
 
   managed {
-    domains = [
+    domains = sort(distinct([
       for r in var.routes :
       r.host
-    ]
+    ]))
+  }
+
+  lifecycle {
+    create_before_destroy = true
   }
 }
 
