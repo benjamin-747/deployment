@@ -92,6 +92,12 @@ variable "ec2_instance_type" {
   default = "t3.micro"
 }
 
+variable "ec2_root_volume_size" {
+  type        = number
+  default     = null
+  description = "Root EBS volume size in GiB for Orion EC2 instances. Null keeps AMI default."
+}
+
 # ECS Fargate: per-service cpu (AWS units) and memory (MiB). Merge with defaults in main.tf locals.
 variable "ecs_fargate_tasks" {
   type = map(object({

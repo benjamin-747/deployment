@@ -32,3 +32,9 @@ variable "efs_sg_id" {
 
 variable "vpc_id" {}
 variable "subnet_ids" {}
+
+variable "root_volume_size" {
+  type        = number
+  default     = null
+  description = "Root EBS volume size in GiB. If null, the AMI default is used."
+}

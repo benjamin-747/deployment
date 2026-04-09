@@ -9,7 +9,12 @@ resource "aws_instance" "this" {
   key_name                    = var.key_name
   user_data_replace_on_change = true
 
-
+  dynamic "root_block_device" {
+    for_each = var.root_volume_size != null ? [1] : []
+    content {
+      volume_size = var.root_volume_size
+    }
+  }
 
   user_data = <<-EOF
 #cloud-config

@@ -20,6 +20,15 @@ data "aws_iam_role" "ecs_task_execution_role" {
   name = "ecsTaskExecutionRole"
 }
 
+locals {
+  environment_stringified = [
+    for kv in var.environment : {
+      name  = kv.name
+      value = tostring(kv.value)
+    }
+  ]
+}
+
 resource "aws_cloudwatch_log_group" "ecs" {
   name              = "/ecs/${var.service_name}-tg"
   retention_in_days = 7
@@ -38,7 +47,7 @@ resource "aws_ecs_task_definition" "app" {
       name        = var.container_name
       image       = var.container_image
       essential   = true
-      environment = var.environment
+      environment = local.environment_stringified
       mountPoints = var.mount_points
       portMappings = [
         {

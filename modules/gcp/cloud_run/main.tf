@@ -75,6 +75,15 @@ resource "google_cloud_run_service" "this" {
   project  = var.project_id
   location = var.region
 
+  lifecycle {
+    # These annotations are often managed by `gcloud` / Cloud Console and may drift.
+    # Ignoring them prevents noisy, unrelated in-place updates.
+    ignore_changes = [
+      template[0].metadata[0].annotations["run.googleapis.com/client-name"],
+      template[0].metadata[0].annotations["run.googleapis.com/client-version"],
+    ]
+  }
+
 
   template {
     spec {

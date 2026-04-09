@@ -4,7 +4,14 @@ variable "region" {
 }
 variable "cluster_name" {}
 variable "task_family" {}
-variable "environment" {}
+variable "environment" {
+  type = list(object({
+    name  = string
+    value = any
+  }))
+  default     = []
+  description = "ECS container environment variables. Values will be stringified for AWS."
+}
 variable "mount_points" {
   type    = list(any)
   default = []

@@ -176,6 +176,8 @@ module "mono_cloud_run" {
   image        = "us-central1-docker.pkg.dev/infra-20250121-20260121-0235/mega/mono-engine:latest-amd64"
   env_vars = {
     MEGA_LOG__LEVEL                       = "info"
+    MEGA_LOG__WITH_ANSI                   = false
+    MEGA_PACK__SAVE_ENTRY_CONCURRENCY     = 8
     MEGA_DATABASE__DB_URL                 = "postgres://${var.cloud_sql_username}:${var.cloud_sql_password}@${module.cloud_sql_pg.db_endpoint}:5432/${var.cloud_sql_pg_name}"
     MEGA_MONOREPO__STORAGE_TYPE           = "gcs"
     MEGA_BUILD__ORION_SERVER              = "https://orion.${var.base_domain}"

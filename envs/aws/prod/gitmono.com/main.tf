@@ -53,6 +53,7 @@ module "gitmono_orion" {
   name                 = "gitmono-orion"
   ami                  = var.ec2_ami
   instance_type        = var.ec2_instance_type
+  root_volume_size     = var.ec2_root_volume_size
   vpc_id               = var.vpc_id
   subnet_ids           = var.public_subnet_ids
   key_name             = module.gitmono_orion_key.key_name
@@ -79,6 +80,7 @@ module "gitmega_orion" {
   name                 = "gitmega-orion"
   ami                  = var.ec2_ami
   instance_type        = var.ec2_instance_type
+  root_volume_size     = var.ec2_root_volume_size
   vpc_id               = var.vpc_id
   subnet_ids           = var.public_subnet_ids
   key_name             = module.gitmega_orion_key.key_name
@@ -166,6 +168,10 @@ module "mono-engine" {
     {
       "name" : "MEGA_LOG__LEVEL",
       "value" : "info"
+    },
+    {
+      "name" : "MEGA_LOG__WITH_ANSI",
+      "value" : false
     },
     {
       "name" : "MEGA_AUTHENTICATION__ENABLE_HTTP_PUSH",
