@@ -1,0 +1,52 @@
+base_domain = "sourcedance.ai"
+region      = "ap-southeast-2"
+
+# Applied to all resources created by this env (not the shared ALB referenced by ARN)
+default_tags = {
+  Project = "internship"
+}
+db_username = "gitmega"
+db_password = "db_password"
+db_schema   = "gitmono"
+
+s3_key        = "s3_key"
+s3_secret_key = "s3_secret"
+s3_bucket     = "gitmono"
+
+app_suffix = "gitmono-com"
+
+# internship-portal app env
+atomgit_client_id          = "atomgit_client_id"
+atomgit_client_secret      = "atomgit_client_secret"
+better_auth_secret         = "better_auth_secret"
+github_client_id           = "github_client_id"
+github_client_secret       = "github_client_secret"
+s3_endpoint                = "https://s3.ap-southeast-2.amazonaws.com"
+opensource_integration_token = "opensource_integration_token"
+zepto_api_key              = "zepto_api_key"
+email_default_from         = "noreply@sourcedance.ai"
+# Optional (have defaults in variables.tf): email_enabled, s3_force_path_style
+
+# internship-bot app env
+bot_private_key          = "bot_private_key"
+bot_webhook_secret       = "bot_webhook_secret"
+bot_github_client_id     = "bot_github_client_id"
+bot_github_client_secret = "bot_github_client_secret"
+bot_atomgit_token        = "bot_atomgit_token"
+bot_app_id               = "1111261"
+
+# internship-score-api app env
+zepto_ak = "zepto_ak"
+zepto_sk = "zepto_sk"
+# Optional (has default "false"): send_email
+
+vpc_id                      = "vpc-012345"
+ecs_sg                      = "sg-012345" # 已存在的 ecs-service-sg 的 id
+public_subnet_ids           = ["subnet-123", "subnet-123", "subnet-123"]
+existing_alb_arn            = "arn:aws:elasticloadbalancing:ap-southeast-2:123:loadbalancer/app/gitmono/123"
+existing_https_listener_arn = "arn:aws:elasticloadbalancing:ap-southeast-2:123:listener/app/gitmono/123/456"
+
+# Optional ECS Fargate overrides (merge with defaults; can set one service only)
+# ecs_fargate_tasks = {
+#   internship-docs = { cpu = "512", memory = "1024" }
+# }

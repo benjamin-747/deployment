@@ -1,0 +1,79 @@
+region      = "ap-singapore"
+base_domain = "buck2hub.com"
+app_suffix  = "buck2hub-com"
+
+default_tags = {
+  App = "buck2hub"
+}
+
+# Credentials — prefer environment variables in CI/CD:
+#   export TF_VAR_tencentcloud_secret_id="..."
+#   export TF_VAR_tencentcloud_secret_key="..."
+tencentcloud_secret_id  = "your-secret-id"
+tencentcloud_secret_key = "your-secret-key"
+
+# Network
+vpc_cidr            = "10.0.0.0/16"
+public_subnet_cidrs = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+
+# Database
+db_username = "gitmega"
+db_password = "Buck2Hub@2026"
+db_schema   = "buck2hub"
+db_cpu      = 1  # cores (0 = auto-select based on memory)
+db_memory   = 2  # GB
+db_storage  = 20 # GB, multiple of 10
+
+# Object storage. Provide only the name prefix; the account APPID is appended
+# automatically (do not use the 12-digit account UIN here).
+cos_bucket = "buck2hub-assets"
+
+# Cache (Valkey 8.0 standard architecture, single-AZ)
+redis_password = "ChangeMe123"
+redis_mem_size = 1024 # MB
+redis_type_id  = 19   # 19 = Valkey 8.0 standard, 20 = Valkey 8.0 cluster, 15 = Redis 6.2
+
+# Compute: all gitmono services run as EKSCI container instances.
+enable_eksci = true
+
+# SSL — terminates at CLB; EKSCI backends stay HTTP.
+# Wildcard (default): covers git/app/api/orion/sync/auth.buck2hub.com.
+# Place PEM files under certs/ (gitignored), e.g. from Let's Encrypt DNS-01:
+#   certbot certonly --manual --preferred-challenges dns -d '*.buck2hub.com' -d buck2hub.com
+#   cp /etc/letsencrypt/live/buck2hub.com/fullchain.pem certs/fullchain.pem
+#   cp /etc/letsencrypt/live/buck2hub.com/privkey.pem   certs/privkey.pem
+ssl_create_mode            = "upload"
+ssl_domain                 = "*.buck2hub.com"
+ssl_certificate_pem_file   = "certs/fullchain.pem"
+ssl_private_key_pem_file   = "certs/privkey.pem"
+#
+# Single-domain free cert (Tencent DV, no wildcard):
+# ssl_create_mode    = "free"
+# ssl_domain         = "app.buck2hub.com"
+# ssl_dv_auth_method = "DNS"
+#
+# Or reference a cert already in the Tencent SSL console:
+# ssl_create_mode    = "existing"
+# ssl_domain         = "*.buck2hub.com"
+# ssl_certificate_id = "abc123"
+
+image_repo_base  = "public.ecr.aws/m8q5m4u3/mega"
+ui_env           = "gitmono"
+rails_env        = "staging-gitmono"
+rails_master_key = "your-rails-master-key"
+
+# Give each pod a public EIP so super-node pods can reach the internet (image
+# pull + outbound API calls). Set false to disable egress.
+enable_pod_eip    = true
+pod_eip_bandwidth = 100
+
+# Per-service pod resources (cpu/memory are K8s quantities; TKE super nodes round
+# requests up to the nearest valid spec, e.g. 0.25c0.5g / 0.5c1g / 1c2g).
+workload_resources = {
+  mono_engine   = { cpu = "500m", memory = "1024Mi", replicas = 1 }
+  mega_ui       = { cpu = "250m", memory = "512Mi", replicas = 1 }
+  mega_web_sync = { cpu = "250m", memory = "512Mi", replicas = 1 }
+  orion_server  = { cpu = "250m", memory = "512Mi", replicas = 1 }
+  campsite_api  = { cpu = "500m", memory = "1024Mi", replicas = 1 }
+}
+

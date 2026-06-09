@@ -55,7 +55,7 @@ Once you approve the execution plan, Terraform applies those changes using your 
 This workflow ensures that you can detect and resolve any unexpected problems with your configuration before Terraform makes changes to your infrastructure.
 
 ```bash
-cd deployment/envs/gcp/prod
+cd envs/gcp/buck2hub.com
 terraform plan -out tf.plan
 terraform apply tf.plan
 ```
@@ -64,7 +64,7 @@ terraform apply tf.plan
 
 Terraform configurations for deploying Mega to GCP are under:
 
-- `deployment/envs/gcp/prod`
+- `envs/gcp/buck2hub.com`
 
 Each environment directory contains:
 
@@ -98,7 +98,7 @@ gcloud services enable \
 Copy the example file and edit values:
 
 ```bash
-cd deployment/envs/gcp/prod
+cd envs/gcp/buck2hub.com
 cp terraform.tfvars.example terraform.tfvars
 ```
 

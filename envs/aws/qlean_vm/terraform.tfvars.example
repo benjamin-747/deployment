@@ -1,0 +1,7 @@
+region               = "ap-southeast-2"
+vpc_id               = "vpc-xxxxxxxx"
+vpc_cidr             = "172.31.0.0/16"
+public_subnet_ids    = ["subnet-xxxxxxxx", "subnet-xxxxxxxx"]
+ec2_ami              = "ami-xxxxxxxx"
+ec2_instance_type    = "t3.micro"
+root_volume_size     = 20
