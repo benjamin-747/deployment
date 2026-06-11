@@ -200,7 +200,7 @@ module "mega-ui-app" {
   cluster_name    = "${var.app_suffix}-mega-app"
   task_family     = "${var.app_suffix}-mega-ui"
   container_name  = "app"
-  container_image = "public.ecr.aws/m8q5m4u3/mega/mega-ui:${var.ui_env}-latest"
+  container_image = "public.ecr.aws/m8q5m4u3/mega/mega-ui:latest"
   container_port  = 3000
   service_name    = "mega-ui-service"
   cpu             = local.ecs_fargate["mega_ui"].cpu
@@ -208,7 +208,40 @@ module "mega-ui-app" {
   subnet_ids      = var.public_subnet_ids
 
   security_group_ids = [module.sg.sg_id]
-  environment        = []
+  environment = [
+    {
+      "name" : "NEXT_PUBLIC_API_URL",
+      "value" : "https://${local.campsite_host}"
+    },
+    {
+      "name" : "NEXT_PUBLIC_INTERNAL_API_URL",
+      "value" : "https://${local.campsite_host}"
+    },
+    {
+      "name" : "NEXT_PUBLIC_MONO_API_URL",
+      "value" : "https://${local.mono_host}"
+    },
+    {
+      "name" : "NEXT_PUBLIC_ORION_API_URL",
+      "value" : "https://${local.orion_host}"
+    },
+    {
+      "name" : "NEXT_PUBLIC_AUTH_URL",
+      "value" : "https://${local.campsite_auth_host}"
+    },
+    {
+      "name" : "NEXT_PUBLIC_WEB_URL",
+      "value" : "https://${local.ui_host}"
+    },
+    {
+      "name" : "NEXT_PUBLIC_SYNC_URL",
+      "value" : "wss://${local.note_sync_host}"
+    },
+    {
+      "name" : "NEXT_PUBLIC_CRATES_PRO_URL",
+      "value" : "https://cratespro.${var.base_domain}"
+    },
+  ]
   load_balancers = [{
     target_group_arn = module.alb.target_group_arns["mega_ui"]
     container_name   = "app"
