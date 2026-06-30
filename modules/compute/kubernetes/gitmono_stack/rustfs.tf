@@ -27,6 +27,15 @@ resource "kubernetes_stateful_set_v1" "rustfs" {
     labels    = { app = "rustfs", "managed-by" = "terraform" }
   }
 
+  # Once the rustfs-console Ingress exists, k3s/Rancher injects
+  # field.cattle.io/publicEndpoints onto this StatefulSet at runtime. We don't
+  # manage any annotations here, so ignore the whole map to avoid a perpetual
+  # diff (ignoring a single key doesn't work when the map is otherwise
+  # unmanaged).
+  lifecycle {
+    ignore_changes = [metadata[0].annotations]
+  }
+
   spec {
     service_name = "rustfs"
     replicas     = 1
@@ -34,7 +43,18 @@ resource "kubernetes_stateful_set_v1" "rustfs" {
     selector { match_labels = { app = "rustfs" } }
 
     template {
-      metadata { labels = { app = "rustfs" } }
+      metadata {
+        labels = { app = "rustfs" }
+        annotations = {
+          # Secret values are injected as env vars, so Kubernetes does not
+          # restart the Pod when only the Secret data changes. This checksum
+          # makes credential rotations trigger a StatefulSet rollout.
+          "checksum/rustfs-auth" = nonsensitive(sha256(jsonencode({
+            access_key = var.rustfs_access_key
+            secret_key = var.rustfs_secret_key
+          })))
+        }
+      }
 
       spec {
         # Newly provisioned longhorn volumes are root-owned; run as root and set
@@ -203,4 +223,51 @@ resource "kubernetes_job_v1" "rustfs_bucket" {
   depends_on = [kubernetes_stateful_set_v1.rustfs]
 
   wait_for_completion = false
+}
+
+# Public Ingress for the RustFS web console (:9001). Served on both the web and
+# websecure entrypoints so the upstream xuanwu gateway (https) reaches it, matching
+# the per-app Ingress pattern. The console is auth-gated by RUSTFS_ACCESS_KEY /
+# RUSTFS_SECRET_KEY, but treat this host as sensitive.
+resource "kubernetes_ingress_v1" "rustfs_console" {
+  count = var.enable_rustfs && var.enable_rustfs_console_ingress ? 1 : 0
+
+  metadata {
+    name      = "rustfs-console"
+    namespace = local.ds_ns
+    labels    = { app = "rustfs", "managed-by" = "terraform" }
+    annotations = {
+      "traefik.ingress.kubernetes.io/router.entrypoints" = "web,websecure"
+    }
+  }
+
+  # k3s/Rancher injects this annotation at runtime; ignore it to avoid a
+  # perpetual diff on every plan.
+  lifecycle {
+    ignore_changes = [metadata[0].annotations["field.cattle.io/publicEndpoints"]]
+  }
+
+  spec {
+    ingress_class_name = var.ingress_class_name
+
+    rule {
+      host = "${var.rustfs_console_subdomain}.${var.base_domain}"
+
+      http {
+        path {
+          path      = "/"
+          path_type = "Prefix"
+
+          backend {
+            service {
+              name = kubernetes_service_v1.rustfs[0].metadata[0].name
+              port {
+                number = 9001
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 }

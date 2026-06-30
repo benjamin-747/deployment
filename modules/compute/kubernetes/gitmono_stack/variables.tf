@@ -1,19 +1,6 @@
-variable "kubeconfig_path" {
-  type        = string
-  description = "Path to the kubeconfig copied from the k3s server (/etc/rancher/k3s/k3s.yaml)."
-  default     = "~/.kube/k3s.yaml"
-}
-
-variable "kubeconfig_context" {
-  type        = string
-  description = "kubeconfig context to use (k3s default is 'default'). Leave empty to use the current context."
-  default     = "default"
-}
-
 variable "namespace" {
   type        = string
   description = "Namespace the gitmono stack is deployed into."
-  default     = "demo"
 }
 
 variable "ingress_class_name" {

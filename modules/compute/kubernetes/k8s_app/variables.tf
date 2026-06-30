@@ -19,6 +19,17 @@ variable "container_port" {
   description = "Container listening port"
 }
 
+variable "image_pull_policy" {
+  type        = string
+  description = "Container imagePullPolicy. Defaults to Always so :latest tags are re-pulled on every (re)start instead of using the node's cached layer."
+  default     = "Always"
+
+  validation {
+    condition     = contains(["Always", "IfNotPresent", "Never"], var.image_pull_policy)
+    error_message = "image_pull_policy must be one of Always, IfNotPresent or Never."
+  }
+}
+
 variable "replicas" {
   type        = number
   description = "Number of pod replicas"

@@ -1,0 +1,38 @@
+# Copy to terraform.tfvars and fill in secrets before apply.
+# Shared kubeconfig / SSH tunnel: see ../k3s/README.md
+
+kubeconfig_path    = "~/.kube/k3s.yaml"
+kubeconfig_context = "default"
+
+namespace          = "mega-rust"
+ingress_class_name = "traefik"
+base_domain        = "rust.xuanwu.openatom.cn"
+
+enable_apps     = true
+image_repo_base = "public.ecr.aws/m8q5m4u3/mega"
+image_tag       = "latest"
+
+app_subdomains = {
+  "mono-engine"   = "git"
+  "mega-ui"       = "app"
+  "mega-web-sync" = "sync"
+  "orion-server"  = "orion"
+  "campsite-api"  = "api"
+}
+
+app_alias_subdomains = {
+  "campsite-api" = ["auth"]
+}
+
+cors_allowed_origins = [
+  "https://app.rust.xuanwu.openatom.cn",
+]
+
+pg_database    = "buck2hub_rust"
+mysql_database = "campsite_api_rust"
+rustfs_bucket  = "buck2hub-assets-rust"
+
+# Required secrets (no defaults in module):
+# pg_password, mysql_root_password, mysql_password, redis_password
+# rustfs_access_key, rustfs_secret_key
+# rails_master_key  — independent per environment

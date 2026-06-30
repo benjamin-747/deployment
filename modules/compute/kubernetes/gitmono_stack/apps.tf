@@ -5,7 +5,7 @@
 # campsite-api) can become healthy. Inter-service traffic uses in-cluster DNS.
 
 locals {
-  app_ns = kubernetes_namespace_v1.demo.metadata[0].name
+  app_ns = kubernetes_namespace_v1.this.metadata[0].name
 
   # In-cluster service URLs (<svc>.<ns>.svc.cluster.local).
   mono_url     = "http://mono-engine.${var.namespace}.svc.cluster.local:8000"
@@ -17,14 +17,25 @@ locals {
   redis_host = "redis-master.${var.namespace}.svc.cluster.local"
 
   # Public subdomain per app: "<prefix>.<base_domain>".
-  app_hosts  = { for k, prefix in var.app_subdomains : k => "${prefix}.${var.base_domain}" }
-  ui_public  = "https://${local.app_hosts["mega-ui"]}"
-  api_public = "https://${local.app_hosts["campsite-api"]}"
+  app_hosts = { for k, prefix in var.app_subdomains : k => "${prefix}.${var.base_domain}" }
 
   # Extra aliases that share an app's Service (e.g. campsite-api also serves auth.*).
   app_alias_hosts = {
     for k, prefixes in var.app_alias_subdomains : k => [for p in prefixes : "${p}.${var.base_domain}"]
   }
+
+  ui_public       = "https://${local.app_hosts["mega-ui"]}"
+  api_public      = "https://${local.app_hosts["campsite-api"]}"
+  auth_public_url = length(lookup(local.app_alias_hosts, "campsite-api", [])) > 0 ? "https://${local.app_alias_hosts["campsite-api"][0]}" : "https://${local.app_hosts["campsite-api"]}"
+  mono_public     = "https://${local.app_hosts["mono-engine"]}"
+  orion_public    = "https://${local.app_hosts["orion-server"]}"
+  sync_public     = "wss://${local.app_hosts["mega-web-sync"]}"
+
+  # CORS origins for mono-engine / orion-server. Defaults to just the UI host;
+  # override via var.cors_allowed_origins in tfvars to allow multiple origins.
+  # The Mega backend parses this env var as a comma-separated list.
+  cors_origins      = length(var.cors_allowed_origins) > 0 ? var.cors_allowed_origins : [local.ui_public]
+  cors_origins_join = join(",", local.cors_origins)
 
   # All hostnames each app's Ingress should match (primary + aliases).
   app_ingress_hosts = {
@@ -50,8 +61,25 @@ locals {
     : ""
   )
 
+  # Repo name per app under image_repo_base (differs from the app key for
+  # mega-web-sync, whose image is published as web-sync-server).
+  app_image_repos = {
+    "mono-engine"   = "mono-engine"
+    "mega-ui"       = "mega-ui"
+    "mega-web-sync" = "web-sync-server"
+    "orion-server"  = "orion-server"
+    "campsite-api"  = "campsite-api"
+  }
+
+  # Effective image per app: an explicit var.app_images[key] wins, otherwise
+  # build "<image_repo_base>/<repo>:<image_tag>".
+  app_images = {
+    for k, repo in local.app_image_repos :
+    k => lookup(var.app_images, k, "") != "" ? var.app_images[k] : "${var.image_repo_base}/${repo}:${var.image_tag}"
+  }
+
   # Image for the mega-init Job (needs python3 + git + the scripts/ dir).
-  mega_init_image = var.mega_init_image != "" ? var.mega_init_image : "${var.image_repo_base}/mega-init:latest"
+  mega_init_image = var.mega_init_image != "" ? var.mega_init_image : "${var.image_repo_base}/mega-init:${var.image_tag}"
 
   rustfs_endpoint = "http://rustfs.${var.namespace}.svc.cluster.local:9000"
 
@@ -72,21 +100,21 @@ locals {
     { name = "MEGA_OBJECT_STORAGE__STORAGE_TYPE", value = "s3compatible" },
   ]
 
-  # Per-app requests/limits. Unlike TKE super nodes (requests == limits), k3s
-  # allows overcommit, so requests and limits are independent. Defaults keep
-  # requests == limits; override per app via var.app_resources in tfvars.
+  # Per-app cpu/memory/replicas. cpu/memory are applied as both requests and
+  # limits (requests == limits) by the k8s_app module. Override per app via
+  # var.app_resources in tfvars.
   app_resources_default = {
-    "mono-engine"   = { requests_cpu = "500m", requests_memory = "1024Mi", limits_cpu = "500m", limits_memory = "1024Mi", replicas = 1 }
-    "mega-ui"       = { requests_cpu = "250m", requests_memory = "512Mi", limits_cpu = "250m", limits_memory = "512Mi", replicas = 1 }
-    "mega-web-sync" = { requests_cpu = "250m", requests_memory = "512Mi", limits_cpu = "250m", limits_memory = "512Mi", replicas = 1 }
-    "orion-server"  = { requests_cpu = "250m", requests_memory = "512Mi", limits_cpu = "250m", limits_memory = "512Mi", replicas = 1 }
-    "campsite-api"  = { requests_cpu = "500m", requests_memory = "1024Mi", limits_cpu = "500m", limits_memory = "1024Mi", replicas = 1 }
+    "mono-engine"   = { cpu = "500m", memory = "1024Mi", replicas = 1 }
+    "mega-ui"       = { cpu = "250m", memory = "512Mi", replicas = 1 }
+    "mega-web-sync" = { cpu = "250m", memory = "512Mi", replicas = 1 }
+    "orion-server"  = { cpu = "250m", memory = "512Mi", replicas = 1 }
+    "campsite-api"  = { cpu = "500m", memory = "1024Mi", replicas = 1 }
   }
   res = merge(local.app_resources_default, var.app_resources)
 
   apps = {
     "mono-engine" = {
-      image          = "${var.image_repo_base}/mono-engine:latest"
+      image          = local.app_images["mono-engine"]
       container_port = 8000
       environment = concat([
         { name = "MEGA_LOG__LEVEL", value = "info" },
@@ -96,26 +124,26 @@ locals {
         { name = "MEGA_DATABASE__DB_URL", value = local.db_url },
         { name = "MEGA_BUILD__ORION_SERVER", value = local.orion_url },
         { name = "MEGA_OAUTH__CAMPSITE_API_DOMAIN", value = local.campsite_url },
-        { name = "MEGA_OAUTH__ALLOWED_CORS_ORIGINS", value = local.ui_public },
+        { name = "MEGA_OAUTH__ALLOWED_CORS_ORIGINS", value = local.cors_origins_join },
         { name = "MEGA_REDIS__URL", value = local.redis_url },
       ], local.s3_env)
     }
     "mega-ui" = {
-      image          = "${var.image_repo_base}/mega-ui:latest"
+      image          = local.app_images["mega-ui"]
       container_port = 3000
       environment = [
-        { name = "NEXT_PUBLIC_API_URL", value = "https://api.xuanwu.openatom.cn" },
+        { name = "NEXT_PUBLIC_API_URL", value = local.api_public },
         { name = "NEXT_PUBLIC_INTERNAL_API_URL", value = local.campsite_url },
-        { name = "NEXT_PUBLIC_MONO_API_URL", value = "https://git.xuanwu.openatom.cn" },
-        { name = "NEXT_PUBLIC_ORION_API_URL", value = "https://orion.xuanwu.openatom.cn" },
-        { name = "NEXT_PUBLIC_AUTH_URL", value = "https://auth.xuanwu.openatom.cn" },
-        { name = "NEXT_PUBLIC_WEB_URL", value = "https://app.xuanwu.openatom.cn" },
-        { name = "NEXT_PUBLIC_SYNC_URL", value = "wss://sync.xuanwu.openatom.cn" },
-        { name = "NEXT_PUBLIC_CRATES_PRO_URL", value = "https://cratespro.xuanwu.openatom.cn" },
+        { name = "NEXT_PUBLIC_MONO_API_URL", value = local.mono_public },
+        { name = "NEXT_PUBLIC_ORION_API_URL", value = local.orion_public },
+        { name = "NEXT_PUBLIC_AUTH_URL", value = local.auth_public_url },
+        { name = "NEXT_PUBLIC_WEB_URL", value = local.ui_public },
+        { name = "NEXT_PUBLIC_SYNC_URL", value = local.sync_public },
+        { name = "NEXT_PUBLIC_CRATES_PRO_URL", value = var.cratespro_url },
       ]
     }
     "mega-web-sync" = {
-      image          = "${var.image_repo_base}/web-sync-server:latest"
+      image          = local.app_images["mega-web-sync"]
       container_port = 9000
       environment = [
         { name = "API_URL", value = local.api_public },
@@ -123,16 +151,16 @@ locals {
       ]
     }
     "orion-server" = {
-      image          = "${var.image_repo_base}/orion-server:latest"
+      image          = local.app_images["orion-server"]
       container_port = 8004
       environment = concat([
         { name = "MEGA_ORION_SERVER__DB_URL", value = local.db_url },
         { name = "MEGA_ORION_SERVER__MONOBASE_URL", value = local.mono_url },
-        { name = "MEGA_OAUTH__ALLOWED_CORS_ORIGINS", value = local.ui_public },
+        { name = "MEGA_OAUTH__ALLOWED_CORS_ORIGINS", value = local.cors_origins_join },
       ], local.s3_env)
     }
     "campsite-api" = {
-      image          = "${var.image_repo_base}/campsite-api:latest"
+      image          = local.app_images["campsite-api"]
       container_port = 8080
       environment = [
         { name = "DEV_APP_URL", value = local.ui_public },
@@ -146,7 +174,7 @@ locals {
 }
 
 module "apps" {
-  source   = "../../../modules/compute/kubernetes/k8s_app"
+  source   = "../k8s_app"
   for_each = var.enable_apps ? local.apps : {}
 
   depends_on = [
@@ -156,17 +184,15 @@ module "apps" {
     kubernetes_stateful_set_v1.rustfs,
   ]
 
-  name            = each.key
-  namespace       = local.app_ns
-  image           = each.value.image
-  container_port  = each.value.container_port
-  replicas        = local.res[each.key].replicas
-  requests_cpu    = local.res[each.key].requests_cpu
-  requests_memory = local.res[each.key].requests_memory
-  limits_cpu      = local.res[each.key].limits_cpu
-  limits_memory   = local.res[each.key].limits_memory
-  environment     = each.value.environment
-  service_type    = "ClusterIP"
+  name           = each.key
+  namespace      = local.app_ns
+  image          = each.value.image
+  container_port = each.value.container_port
+  replicas       = local.res[each.key].replicas
+  cpu            = local.res[each.key].cpu
+  memory         = local.res[each.key].memory
+  environment    = each.value.environment
+  service_type   = "ClusterIP"
 }
 
 # One-time schema bootstrap for campsite-api. Runs `bin/rails db:create`
@@ -301,7 +327,7 @@ resource "kubernetes_job_v1" "mega_init" {
 
 # One Traefik Ingress per app, routing its public subdomain to the app Service.
 # Served on both the http (web) and https (websecure) entrypoints so the upstream
-# 玄武 gateway (which forwards over https) reaches them.
+# xuanwu gateway (which forwards over https) reaches them.
 resource "kubernetes_ingress_v1" "apps" {
   for_each = var.enable_apps ? local.apps : {}
 

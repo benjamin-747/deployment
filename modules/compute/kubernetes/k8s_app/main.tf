@@ -40,8 +40,9 @@ resource "kubernetes_deployment_v1" "this" {
 
       spec {
         container {
-          name  = "app"
-          image = var.image
+          name              = "app"
+          image             = var.image
+          image_pull_policy = var.image_pull_policy
 
           port {
             container_port = var.container_port

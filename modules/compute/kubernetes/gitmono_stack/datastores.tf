@@ -3,7 +3,7 @@
 # reliably (timeout / mirror 403). Service names match apps.tf connection strings.
 
 locals {
-  ds_ns = kubernetes_namespace_v1.demo.metadata[0].name
+  ds_ns = kubernetes_namespace_v1.this.metadata[0].name
 }
 
 # ---------------------------------------------------------------------------
